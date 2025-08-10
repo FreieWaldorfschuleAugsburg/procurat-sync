@@ -1,6 +1,5 @@
 package de.waldorfaugsburg.psync.client.procurat.model;
 
-import com.google.gson.JsonObject;
 import lombok.*;
 
 @NoArgsConstructor

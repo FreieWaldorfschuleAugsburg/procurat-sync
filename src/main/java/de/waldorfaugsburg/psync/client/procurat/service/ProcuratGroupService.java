@@ -14,21 +14,21 @@ public interface ProcuratGroupService {
     Call<ProcuratGroup> findAll();
 
     @GET("groups")
-    Call<List<ProcuratGroup>> findGroupsByMemberId(@Query("memberId") int memberId);
+    Call<List<ProcuratGroup>> findByMemberId(@Query("memberId") int memberId);
 
     @GET("groups/{groupId}")
-    Call<ProcuratGroup> findGroupById(@Path("id") int groupId);
+    Call<ProcuratGroup> findById(@Path("id") int groupId);
 
     @GET("groups/{groupId}/members")
-    Call<List<ProcuratGroupMembership>> findGroupMembersByGroupId(@Path("groupId") int groupId);
+    Call<List<ProcuratGroupMembership>> findMembers(@Path("groupId") int groupId);
 
     @PUT("groups/{groupId}/members/{personId}")
-    Call<Void> updateGroupMembership(@Path("groupId") int groupId, @Path("personId") int personId, @Body ProcuratGroupMembership membership);
+    Call<Void> updateMembership(@Path("groupId") int groupId, @Path("personId") int personId, @Body ProcuratGroupMembership membership);
 
     @POST("groups/{groupId}/members")
-    Call<Void> createGroupMembership(@Path("groupId") int groupId, @Body ProcuratGroupMembership membership);
+    Call<Void> createMembership(@Path("groupId") int groupId, @Body ProcuratGroupMembership membership);
 
     @GET("groups/{groupId}/udfs")
-    Call<List<ProcuratUDF>> findUDFsByGroupId(@Path("groupId") int groupId, @Query("includeParentGroups") boolean includeParentGroups);
+    Call<List<ProcuratUDF>> findUDFs(@Path("groupId") int groupId, @Query("includeParentGroups") boolean includeParentGroups);
 
 }

@@ -9,18 +9,18 @@ import java.util.List;
 public interface ProcuratPersonService {
 
     @GET("persons/{personId}")
-    Call<ProcuratPerson> findPersonById(@Path("personId") int personId);
+    Call<ProcuratPerson> findById(@Path("personId") int personId);
 
     @GET("persons/family/{personId}")
-    Call<List<ProcuratPerson>> findPersonsByFamilyId(@Path("id") int personId);
+    Call<List<ProcuratPerson>> findByFamilyId(@Path("id") int personId);
 
     @GET("persons")
     Call<List<ProcuratPerson>> findAll();
 
     @PUT("persons/{personId}")
-    Call<Void> updatePerson(@Path("personId") int personId, @Body ProcuratPerson person);
+    Call<Void> update(@Path("personId") int personId, @Body ProcuratPerson person);
 
     @POST("persons")
-    Call<Void> createPerson(@Body ProcuratPerson person);
+    Call<Void> create(@Body ProcuratPerson person);
 
 }
