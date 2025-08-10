@@ -15,6 +15,8 @@ import java.util.List;
 @Slf4j
 public final class StarfaceClient extends AbstractHttpClient {
 
+    private static final int MAX_NUMBERS_PER_CONTACT = 4;
+
     private final String url;
     private final String userId;
     private final String password;
@@ -97,7 +99,7 @@ public final class StarfaceClient extends AbstractHttpClient {
         }
 
         // STARFACE supports a maximum of 4 phone numbers per contact
-        for (int i = 0; i < Integer.min(phoneNumbers.size(), 4); i++) {
+        for (int i = 0; i < Integer.min(phoneNumbers.size(), MAX_NUMBERS_PER_CONTACT); i++) {
             final String telephoneNumber = phoneNumbers.get(i);
             telephoneAttributes.add(new StarfaceContactAttribute("PHONE_NUMBER", i == 0 ? "phone" : ("phone" + (i + 1)), telephoneNumber, "de.vertico.starface.addressbook.line.label_telephonenumber"));
         }
