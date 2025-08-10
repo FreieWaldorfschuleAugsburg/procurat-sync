@@ -19,6 +19,7 @@ public final class ApplicationConfiguration {
     public static class ClientConfiguration {
         private ProcuratClientConfiguration procurat;
         private StarfaceClientConfiguration starface;
+        private EWSClientConfiguration ews;
     }
 
     @NoArgsConstructor
@@ -36,6 +37,16 @@ public final class ApplicationConfiguration {
         private String userId;
         private String password;
         private String tag;
+    }
+
+    @NoArgsConstructor
+    @Getter
+    public static class EWSClientConfiguration {
+        private String clientId;
+        private String tenantId;
+        private String clientSecret;
+        private String contactFolderId;
+        private String impersonatedUserId;
     }
 
     @NoArgsConstructor

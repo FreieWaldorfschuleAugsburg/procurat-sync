@@ -1,9 +1,11 @@
 package de.waldorfaugsburg.psync.client.procurat;
 
 import de.waldorfaugsburg.psync.client.AbstractHttpClient;
+import de.waldorfaugsburg.psync.client.procurat.model.ProcuratAddress;
 import de.waldorfaugsburg.psync.client.procurat.model.ProcuratContactInformation;
 import de.waldorfaugsburg.psync.client.procurat.model.ProcuratGroupMembership;
 import de.waldorfaugsburg.psync.client.procurat.model.ProcuratPerson;
+import de.waldorfaugsburg.psync.client.procurat.service.ProcuratAddressService;
 import de.waldorfaugsburg.psync.client.procurat.service.ProcuratContactInformationService;
 import de.waldorfaugsburg.psync.client.procurat.service.ProcuratGroupService;
 import de.waldorfaugsburg.psync.client.procurat.service.ProcuratPersonService;
@@ -31,6 +33,8 @@ public final class ProcuratClient extends AbstractHttpClient {
     private ProcuratGroupService groupService;
     @Getter
     private ProcuratContactInformationService contactInformationService;
+    @Getter
+    private ProcuratAddressService addressService;
 
     public ProcuratClient(final String url, final String apiKey, int rootGroupId) {
         this.url = url;
@@ -47,6 +51,7 @@ public final class ProcuratClient extends AbstractHttpClient {
         this.personService = getRetrofit().create(ProcuratPersonService.class);
         this.groupService = getRetrofit().create(ProcuratGroupService.class);
         this.contactInformationService = getRetrofit().create(ProcuratContactInformationService.class);
+        this.addressService = getRetrofit().create(ProcuratAddressService.class);
     }
 
     public List<ProcuratPerson> getAllPersons() {
@@ -79,6 +84,10 @@ public final class ProcuratClient extends AbstractHttpClient {
 
     public List<ProcuratContactInformation> getContactInformationByAddressId(final int addressId) {
         return execute(contactInformationService.findByAddressId(addressId));
+    }
+
+    public ProcuratAddress getAddressById(final int addressId) {
+        return execute(addressService.findById(addressId));
     }
 
     @Override

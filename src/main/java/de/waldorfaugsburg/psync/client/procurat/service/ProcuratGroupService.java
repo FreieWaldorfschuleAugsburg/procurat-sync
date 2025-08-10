@@ -17,7 +17,7 @@ public interface ProcuratGroupService {
     Call<List<ProcuratGroup>> findByMemberId(@Query("memberId") int memberId);
 
     @GET("groups/{groupId}")
-    Call<ProcuratGroup> findById(@Path("id") int groupId);
+    Call<ProcuratGroup> findById(@Path("groupId") int groupId);
 
     @GET("groups/{groupId}/members")
     Call<List<ProcuratGroupMembership>> findMembers(@Path("groupId") int groupId);
