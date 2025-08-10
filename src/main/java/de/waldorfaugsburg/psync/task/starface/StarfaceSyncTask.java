@@ -1,5 +1,6 @@
 package de.waldorfaugsburg.psync.task.starface;
 
+import com.cronutils.model.Cron;
 import com.google.gson.JsonObject;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
@@ -16,12 +17,12 @@ import java.util.List;
 @Slf4j
 public class StarfaceSyncTask extends AbstractSyncTask {
 
-    public StarfaceSyncTask(final ProcuratSyncApplication application, final JsonObject customData) {
-        super(application, customData);
+    public StarfaceSyncTask(final ProcuratSyncApplication application, final Cron cron, final JsonObject customData) {
+        super(application, cron, customData);
     }
 
     @Override
-    public void sync() {
+    public void run() {
         final StarfaceClient starfaceClient = getApplication().getStarfaceClient();
 
         // Delete all contacts to start fresh

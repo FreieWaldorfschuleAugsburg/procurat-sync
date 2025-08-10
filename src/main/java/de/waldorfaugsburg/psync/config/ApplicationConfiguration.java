@@ -3,7 +3,6 @@ package de.waldorfaugsburg.psync.config;
 import com.google.gson.JsonObject;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import okhttp3.internal.concurrent.Task;
 
 import java.util.List;
 
@@ -42,7 +41,7 @@ public final class ApplicationConfiguration {
     @NoArgsConstructor
     @Getter
     public static class TaskConfiguration {
-        private String name;
+        private String type;
         private String interval;
         private JsonObject custom;
     }

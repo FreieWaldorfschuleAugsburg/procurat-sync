@@ -37,7 +37,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>de.waldorfaugsburg.psync.PSyncApplication</mainClass>
+                            <mainClass>de.waldorfaugsburg.psync.ProcuratSyncApplication</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -55,6 +55,11 @@
             <groupId>com.squareup.retrofit2</groupId>
             <artifactId>converter-gson</artifactId>
             <version>3.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.cronutils</groupId>
+            <artifactId>cron-utils</artifactId>
+            <version>9.2.0</version>
         </dependency>
 
         <dependency>

@@ -120,7 +120,7 @@ public final class StarfaceClient extends AbstractHttpClient {
 
         int count = 0;
         for (int page = metadataResult.getMetadata().getTotalPages(); page >= 0; page--) {
-            StarfaceContactSearchResult result = execute(service.findContacts(tag.getId(), page, 40));
+            final StarfaceContactSearchResult result = execute(service.findContacts(tag.getId(), page, 40));
 
             for (final StarfaceContactSearchResult.Contact contact : result.getContacts()) {
                 execute(service.deleteContact(contact.getId()));
