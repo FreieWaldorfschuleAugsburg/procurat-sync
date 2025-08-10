@@ -1,6 +1,7 @@
 package de.waldorfaugsburg.psync.client.procurat;
 
 import de.waldorfaugsburg.psync.client.AbstractHttpClient;
+import de.waldorfaugsburg.psync.client.procurat.model.ProcuratContactInformation;
 import de.waldorfaugsburg.psync.client.procurat.model.ProcuratGroupMembership;
 import de.waldorfaugsburg.psync.client.procurat.model.ProcuratPerson;
 import de.waldorfaugsburg.psync.client.procurat.service.ProcuratContactInformationService;
@@ -48,6 +49,10 @@ public final class ProcuratClient extends AbstractHttpClient {
         this.contactInformationService = getRetrofit().create(ProcuratContactInformationService.class);
     }
 
+    public List<ProcuratPerson> getAllPersons() {
+        return execute(personService.findAll());
+    }
+
     public List<ProcuratGroupMembership> getRootGroupMemberships() {
         return execute(groupService.findMembers(rootGroupId));
     }
@@ -59,12 +64,21 @@ public final class ProcuratClient extends AbstractHttpClient {
                 final LocalDateTime entryDate = LocalDateTime.parse(membership.getEntryDate(), FORMATTER);
                 final LocalDateTime exitDate = membership.getExitDate() == null ? null : LocalDateTime.parse(membership.getExitDate(), FORMATTER);
 
+                // Check if membership is still active
                 if (now.isAfter(entryDate) && (exitDate == null || now.isBefore(exitDate))) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    public List<ProcuratContactInformation> getContactInformationByPersonId(final int personId) {
+        return execute(contactInformationService.findByPersonId(personId));
+    }
+
+    public List<ProcuratContactInformation> getContactInformationByAddressId(final int addressId) {
+        return execute(contactInformationService.findByAddressId(addressId));
     }
 
     @Override

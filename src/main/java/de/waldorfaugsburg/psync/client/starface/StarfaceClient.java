@@ -95,6 +95,8 @@ public final class StarfaceClient extends AbstractHttpClient {
         if (homePhoneNumber != null) {
             telephoneAttributes.add(new StarfaceContactAttribute("PRIVATE_PHONE_NUMBER", "homephone", homePhoneNumber, "de.vertico.starface.addressbook.line.label_privatetelephonenumber"));
         }
+
+        // STARFACE supports a maximum of 4 phone numbers per contact
         for (int i = 0; i < Integer.min(phoneNumbers.size(), 4); i++) {
             final String telephoneNumber = phoneNumbers.get(i);
             telephoneAttributes.add(new StarfaceContactAttribute("PHONE_NUMBER", i == 0 ? "phone" : ("phone" + (i + 1)), telephoneNumber, "de.vertico.starface.addressbook.line.label_telephonenumber"));
