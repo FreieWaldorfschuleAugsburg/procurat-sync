@@ -1,21 +1,21 @@
 package de.waldorfaugsburg.psync.config;
 
-import com.google.gson.JsonObject;
+import de.waldorfaugsburg.psync.task.AbstractSyncTaskConfiguration;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @NoArgsConstructor
 @Getter
 public final class ApplicationConfiguration {
 
     private ClientConfiguration clients;
-    private List<TaskConfiguration> tasks;
+    private List<AbstractSyncTaskConfiguration> tasks;
 
     @NoArgsConstructor
     @Getter
-
     public static class ClientConfiguration {
         private ProcuratClientConfiguration procurat;
         private StarfaceClientConfiguration starface;
@@ -28,6 +28,7 @@ public final class ApplicationConfiguration {
         private String url;
         private String apiKey;
         private int rootGroupId;
+        private Map<String, Integer> namedGroups;
     }
 
     @NoArgsConstructor
@@ -47,13 +48,5 @@ public final class ApplicationConfiguration {
         private String clientSecret;
         private String contactFolderId;
         private String impersonatedUserId;
-    }
-
-    @NoArgsConstructor
-    @Getter
-    public static class TaskConfiguration {
-        private String type;
-        private String interval;
-        private JsonObject custom;
     }
 }

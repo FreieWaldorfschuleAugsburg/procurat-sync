@@ -11,8 +11,8 @@ public interface ProcuratPersonService {
     @GET("persons/{personId}")
     Call<ProcuratPerson> findById(@Path("personId") int personId);
 
-    @GET("persons/family/{personId}")
-    Call<List<ProcuratPerson>> findByFamilyId(@Path("id") int personId);
+    @GET("persons/family/{familyId}")
+    Call<List<ProcuratPerson>> findByFamilyId(@Path("familyId") int familyId);
 
     @GET("persons")
     Call<List<ProcuratPerson>> findAll();

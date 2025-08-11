@@ -1,10 +1,15 @@
 package de.waldorfaugsburg.psync.task;
 
 import com.cronutils.model.Cron;
+import com.cronutils.model.CronType;
+import com.cronutils.model.definition.CronDefinition;
+import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.model.time.ExecutionTime;
+import com.cronutils.parser.CronParser;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonObject;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
+import de.waldorfaugsburg.psync.config.ApplicationConfiguration;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -13,11 +18,16 @@ import java.time.ZonedDateTime;
 
 @Slf4j
 @ToString
-public abstract class AbstractSyncTask {
+public abstract class AbstractSyncTask<T extends AbstractSyncTaskConfiguration> {
+
+    private static final CronDefinition CRON_DEFINITION = CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX);
+    private static final CronParser CRON_PARSER = new CronParser(CRON_DEFINITION);
 
     private final ProcuratSyncApplication application;
-    private final Cron interval;
-    private final JsonObject customData;
+    private final T configuration;
+
+    @Getter
+    private final boolean runAtStartup;
 
     @Getter
     private ZonedDateTime nextRun;
@@ -25,10 +35,10 @@ public abstract class AbstractSyncTask {
     @Getter
     private boolean running = false;
 
-    protected AbstractSyncTask(final ProcuratSyncApplication application, final Cron interval, final JsonObject customData) {
+    protected AbstractSyncTask(final ProcuratSyncApplication application, final T configuration) {
         this.application = application;
-        this.interval = interval;
-        this.customData = customData;
+        this.configuration = configuration;
+        this.runAtStartup = configuration.isRunAtStartup();
         updateNextRun();
     }
 
@@ -53,6 +63,7 @@ public abstract class AbstractSyncTask {
     }
 
     private void updateNextRun() {
+        final Cron interval = CRON_PARSER.parse(configuration.getInterval());
         nextRun = ExecutionTime.forCron(interval).nextExecution(ZonedDateTime.now()).orElseThrow();
     }
 
@@ -60,12 +71,8 @@ public abstract class AbstractSyncTask {
         return application;
     }
 
-    protected Cron getInterval() {
-        return interval;
-    }
-
-    protected JsonObject getCustomData() {
-        return customData;
+    protected T getConfiguration() {
+        return configuration;
     }
 
 }

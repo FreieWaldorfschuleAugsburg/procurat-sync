@@ -1,7 +1,5 @@
 package de.waldorfaugsburg.psync.task.starface;
 
-import com.cronutils.model.Cron;
-import com.google.gson.JsonObject;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
 import de.waldorfaugsburg.psync.client.procurat.model.ProcuratContactInformation;
@@ -15,10 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
-public class StarfaceSyncTask extends AbstractSyncTask {
+public class StarfaceSyncTask extends AbstractSyncTask<StarfaceSyncTaskConfiguration> {
 
-    public StarfaceSyncTask(final ProcuratSyncApplication application, final Cron cron, final JsonObject customData) {
-        super(application, cron, customData);
+    public StarfaceSyncTask(final ProcuratSyncApplication application, final StarfaceSyncTaskConfiguration configuration) {
+        super(application, configuration);
     }
 
     @Override

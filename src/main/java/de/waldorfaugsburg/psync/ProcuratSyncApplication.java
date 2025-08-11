@@ -1,11 +1,14 @@
 package de.waldorfaugsburg.psync;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import de.waldorfaugsburg.psync.client.ews.EWSClient;
 import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
 import de.waldorfaugsburg.psync.client.starface.StarfaceClient;
 import de.waldorfaugsburg.psync.config.ApplicationConfiguration;
+import de.waldorfaugsburg.psync.config.JsonAdapter;
+import de.waldorfaugsburg.psync.task.AbstractSyncTaskConfiguration;
 import de.waldorfaugsburg.psync.task.SyncTaskScheduler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +20,10 @@ import java.io.FileReader;
 @Slf4j
 public class ProcuratSyncApplication {
 
+    private final static Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(AbstractSyncTaskConfiguration.class, new JsonAdapter<>())
+            .create();
+
     private ApplicationConfiguration configuration;
     private ProcuratClient procuratClient;
     private StarfaceClient starfaceClient;
@@ -26,12 +33,13 @@ public class ProcuratSyncApplication {
 
     public void enable() throws Exception {
         try (final JsonReader reader = new JsonReader(new FileReader("config.json"))) {
-            configuration = new Gson().fromJson(reader, ApplicationConfiguration.class);
+            configuration = GSON.fromJson(reader, ApplicationConfiguration.class);
         }
 
         procuratClient = new ProcuratClient(configuration.getClients().getProcurat().getUrl(),
                 configuration.getClients().getProcurat().getApiKey(),
-                configuration.getClients().getProcurat().getRootGroupId());
+                configuration.getClients().getProcurat().getRootGroupId(),
+                configuration.getClients().getProcurat().getNamedGroups());
 
         starfaceClient = new StarfaceClient(configuration.getClients().getStarface().getUrl(),
                 configuration.getClients().getStarface().getUserId(),

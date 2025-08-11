@@ -21,7 +21,7 @@ import microsoft.exchange.webservices.data.search.ItemView;
 import microsoft.exchange.webservices.data.search.filter.SearchFilter;
 
 import java.net.URI;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -102,8 +102,8 @@ public final class EWSClient {
         }
     }
 
-    public Contact createContact(final int personId, final String firstName, final String lastName, final String email, final String homePhone, final String mobilePhone, final String city, final String postalCode, final String street, final String note) {
-        final String fullName = firstName + " " + lastName;
+    public Contact createContact(final int personId, final String firstName, final String lastName, final String privateEmail, final String workEmail, final String homePhone, final String mobilePhone, final String city, final String postalCode, final String street, final String note) {
+        final String fullName = lastName + " " + firstName;
 
         try {
             final Contact contact = new Contact(service);
@@ -111,8 +111,12 @@ public final class EWSClient {
             contact.setSurname(lastName);
             contact.setDisplayName(fullName);
 
-            if (email != null) {
-                contact.getEmailAddresses().setEmailAddress(EmailAddressKey.EmailAddress1, new EmailAddress(fullName, email));
+            if (privateEmail != null) {
+                contact.getEmailAddresses().setEmailAddress(EmailAddressKey.EmailAddress1, new EmailAddress(fullName, privateEmail));
+            }
+
+            if (workEmail != null) {
+                contact.getEmailAddresses().setEmailAddress(EmailAddressKey.EmailAddress2, new EmailAddress(fullName, workEmail));
             }
 
             if (homePhone != null) {
@@ -140,24 +144,25 @@ public final class EWSClient {
         }
     }
 
-    public void createContactGroup(final String name, final List<Contact> contacts) {
+    public void createContactGroup(final String groupName, final Map<String, String> displayNameAddressMap) {
         try {
             final ContactGroup contactGroup = new ContactGroup(service);
-            contactGroup.setDisplayName(name);
+            contactGroup.setDisplayName(groupName);
             contactGroup.save(contactFolderId);
 
-            for (final Contact contact : contacts) {
-                final OutParam<EmailAddress> address = new OutParam<>();
-                if (contact.getEmailAddresses().tryGetValue(EmailAddressKey.EmailAddress1, address)) {
-                    contactGroup.getMembers().addOneOff(contact.getDisplayName(), address.getParam().getAddress());
-                    log.info("In group {} adding contact {} (name: {})", name, contact.getId(), contact.getDisplayName());
+            displayNameAddressMap.forEach((displayName, address) -> {
+                try {
+                    contactGroup.getMembers().addOneOff(displayName, address);
+                    log.info("Add address {} <{}> to group {}", displayName, address, groupName);
+                } catch (final Exception e) {
+                    log.error("Error adding {} <{}> to group {}", displayName, address, groupName, e);
                 }
-            }
+            });
 
             contactGroup.update(ConflictResolutionMode.AlwaysOverwrite);
-            log.info("Created contact group {} with {} contacts", name, contacts.size());
+            log.info("Created contact group {} with {} contacts", groupName, displayNameAddressMap.size());
         } catch (final Exception e) {
-            log.error("Error adding contact group {}", name, e);
+            log.error("Error adding contact group {}", groupName, e);
         }
     }
 }

@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 public final class ProcuratClient extends AbstractHttpClient {
 
@@ -20,6 +21,7 @@ public final class ProcuratClient extends AbstractHttpClient {
     private final String url;
     private final String apiKey;
     private final int rootGroupId;
+    private final Map<String, Integer> namedGroups;
 
     @Getter
     private ProcuratPersonService personService;
@@ -32,10 +34,12 @@ public final class ProcuratClient extends AbstractHttpClient {
     @Getter
     private ProcuratCommunicationService communicationService;
 
-    public ProcuratClient(final String url, final String apiKey, int rootGroupId) {
+    public ProcuratClient(final String url, final String apiKey,
+                          final int rootGroupId, final Map<String, Integer> namedGroups) {
         this.url = url;
         this.apiKey = apiKey;
         this.rootGroupId = rootGroupId;
+        this.namedGroups = namedGroups;
 
         setup();
     }
@@ -57,6 +61,10 @@ public final class ProcuratClient extends AbstractHttpClient {
 
     public List<ProcuratPerson> getAllPersons() {
         return execute(personService.findAll());
+    }
+
+    public List<ProcuratPerson> getPersonsByFamilyId(final int familyId) {
+        return execute(personService.findByFamilyId(familyId));
     }
 
     public List<ProcuratGroupMembership> getGroupMemberships(final int groupId) {
@@ -81,6 +89,18 @@ public final class ProcuratClient extends AbstractHttpClient {
             }
         }
         return false;
+    }
+
+    public String getNamedGroupName(final int personId) {
+        for (final String name : namedGroups.keySet()) {
+            final Integer groupId = namedGroups.get(name);
+            for (final ProcuratGroupMembership membership : getGroupMemberships(groupId)) {
+                if (membership.getPersonId() == personId) {
+                    return name;
+                }
+            }
+        }
+        return null;
     }
 
     public List<ProcuratContactInformation> getContactInformationByPersonId(final int personId) {
