@@ -22,7 +22,7 @@ public class StarfaceSyncTask extends AbstractSyncTask {
     }
 
     @Override
-    public void run() {
+    public void run() throws Exception {
         final StarfaceClient starfaceClient = getApplication().getStarfaceClient();
 
         // Delete all contacts to start fresh

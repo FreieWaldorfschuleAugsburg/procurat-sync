@@ -1,14 +1,8 @@
 package de.waldorfaugsburg.psync.client.procurat;
 
 import de.waldorfaugsburg.psync.client.AbstractHttpClient;
-import de.waldorfaugsburg.psync.client.procurat.model.ProcuratAddress;
-import de.waldorfaugsburg.psync.client.procurat.model.ProcuratContactInformation;
-import de.waldorfaugsburg.psync.client.procurat.model.ProcuratGroupMembership;
-import de.waldorfaugsburg.psync.client.procurat.model.ProcuratPerson;
-import de.waldorfaugsburg.psync.client.procurat.service.ProcuratAddressService;
-import de.waldorfaugsburg.psync.client.procurat.service.ProcuratContactInformationService;
-import de.waldorfaugsburg.psync.client.procurat.service.ProcuratGroupService;
-import de.waldorfaugsburg.psync.client.procurat.service.ProcuratPersonService;
+import de.waldorfaugsburg.psync.client.procurat.model.*;
+import de.waldorfaugsburg.psync.client.procurat.service.*;
 import lombok.Getter;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
@@ -35,6 +29,8 @@ public final class ProcuratClient extends AbstractHttpClient {
     private ProcuratContactInformationService contactInformationService;
     @Getter
     private ProcuratAddressService addressService;
+    @Getter
+    private ProcuratCommunicationService communicationService;
 
     public ProcuratClient(final String url, final String apiKey, int rootGroupId) {
         this.url = url;
@@ -52,14 +48,23 @@ public final class ProcuratClient extends AbstractHttpClient {
         this.groupService = getRetrofit().create(ProcuratGroupService.class);
         this.contactInformationService = getRetrofit().create(ProcuratContactInformationService.class);
         this.addressService = getRetrofit().create(ProcuratAddressService.class);
+        this.communicationService = getRetrofit().create(ProcuratCommunicationService.class);
+    }
+
+    public ProcuratPerson getPersonById(final int personId) {
+        return execute(personService.findById(personId));
     }
 
     public List<ProcuratPerson> getAllPersons() {
         return execute(personService.findAll());
     }
 
+    public List<ProcuratGroupMembership> getGroupMemberships(final int groupId) {
+        return execute(groupService.findMembers(groupId));
+    }
+
     public List<ProcuratGroupMembership> getRootGroupMemberships() {
-        return execute(groupService.findMembers(rootGroupId));
+        return getGroupMemberships(rootGroupId);
     }
 
     public boolean isPersonActiveMember(final List<ProcuratGroupMembership> memberships, final ProcuratPerson person) {
@@ -88,6 +93,10 @@ public final class ProcuratClient extends AbstractHttpClient {
 
     public ProcuratAddress getAddressById(final int addressId) {
         return execute(addressService.findById(addressId));
+    }
+
+    public List<ProcuratCommunication> getCommunicationsByPersonId(final int personId) {
+        return execute(communicationService.findByPersonId(personId));
     }
 
     @Override

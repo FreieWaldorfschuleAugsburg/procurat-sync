@@ -2,6 +2,7 @@ package de.waldorfaugsburg.psync.task;
 
 import com.cronutils.model.Cron;
 import com.cronutils.model.time.ExecutionTime;
+import com.google.common.base.Preconditions;
 import com.google.gson.JsonObject;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import lombok.Getter;
@@ -21,6 +22,9 @@ public abstract class AbstractSyncTask {
     @Getter
     private ZonedDateTime nextRun;
 
+    @Getter
+    private boolean running = false;
+
     protected AbstractSyncTask(final ProcuratSyncApplication application, final Cron interval, final JsonObject customData) {
         this.application = application;
         this.interval = interval;
@@ -28,13 +32,24 @@ public abstract class AbstractSyncTask {
         updateNextRun();
     }
 
-    public abstract void run();
+    public abstract void run() throws Exception;
 
     public void runTask() {
+        Preconditions.checkState(!running, "task already running.");
         log.info("Starting task {}", getClass().getSimpleName());
+
         updateNextRun();
-        run();
-        log.info("Finished task {} (next run: {})", getClass().getSimpleName(), getNextRun());
+        running = true;
+        final long startMillis = System.currentTimeMillis();
+
+        try {
+            run();
+        } catch (final Exception e) {
+            log.error("Error running task {}", getClass().getSimpleName(), e);
+        } finally {
+            running = false;
+            log.info("Finished task {} within {}ms (next run: {})", getClass().getSimpleName(), System.currentTimeMillis() - startMillis, getNextRun());
+        }
     }
 
     private void updateNextRun() {
