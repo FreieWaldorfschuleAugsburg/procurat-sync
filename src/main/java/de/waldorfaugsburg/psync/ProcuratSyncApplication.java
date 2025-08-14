@@ -12,7 +12,6 @@ import de.waldorfaugsburg.psync.task.AbstractSyncTaskConfiguration;
 import de.waldorfaugsburg.psync.task.SyncTaskScheduler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.io.FileReader;
 
@@ -72,8 +71,8 @@ public class ProcuratSyncApplication {
             }
         }));
 
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
+        //SLF4JBridgeHandler.removeHandlersForRootLogger();
+        //SLF4JBridgeHandler.install();
 
         new Thread(() -> {
             try {

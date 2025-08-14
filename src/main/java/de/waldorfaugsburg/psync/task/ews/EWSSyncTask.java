@@ -32,10 +32,12 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
             selectorGroupMap.putAll(group, accumulateSelectors(procuratClient, group).stream().distinct().toList());
         }
 
-        log.info("Aggregated a total of {} persons in {} groups for synchronisation", selectorGroupMap.values().size(), selectorGroupMap.keySet().size());
+        final long personCount = selectorGroupMap.values().stream().distinct().count();
+        log.info("Aggregated a total of {} persons in {} groups for synchronisation", personCount, selectorGroupMap.keySet().size());
 
         final EWSClient ewsClient = getApplication().getEwsClient();
         if (!ewsClient.deleteAllContacts()) {
+            recordDeviation("Could not delete contacts");
             return;
         }
 
@@ -58,11 +60,18 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
                     final OutParam<EmailAddress> outParam = new OutParam<>();
                     if (contact.getEmailAddresses().tryGetValue(EmailAddressKey.EmailAddress1, outParam)) {
                         contactEmailMap.put(contact.getDisplayName(), outParam.getParam().getAddress());
+                    } else if (contact.getEmailAddresses().tryGetValue(EmailAddressKey.EmailAddress2, outParam)) {
+                        contactEmailMap.put(contact.getDisplayName(), outParam.getParam().getAddress());
+                        recordDeviation("Fallback to work email for '%s' (Id: %s) for membership in '%s'", contact.getDisplayName(), contact.getId(), group.getName());
+                    } else {
+                        recordDeviation("Could not find private email for '%s' (Id: %s) for membership in '%s'", contact.getDisplayName(), person.getId(), group.getName());
                     }
                 } else if (emailTypeString.equals("work")) {
                     final OutParam<EmailAddress> outParam = new OutParam<>();
                     if (contact.getEmailAddresses().tryGetValue(EmailAddressKey.EmailAddress2, outParam)) {
                         contactEmailMap.put(contact.getDisplayName(), outParam.getParam().getAddress());
+                    } else {
+                        recordDeviation("Could not find work email for '%s' (Id: %s) for membership in '%s'", person.getLastName() + " " + person.getFirstName(), person.getId(), group.getName());
                     }
                 }
             }
@@ -71,6 +80,10 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
             final Map<String, String> extraAddresses = group.getExtraAddresses();
             if (extraAddresses != null) {
                 contactEmailMap.putAll(group.getExtraAddresses());
+            }
+
+            if (contactEmailMap.isEmpty()) {
+                recordDeviation("No contacts found for group %s", group.getName());
             }
 
             Thread.sleep(2000);
@@ -150,7 +163,7 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
                         .append(familyPerson.getLastName());
 
                 final String namedGroupName = procuratClient.getNamedGroupName(familyPerson.getId());
-                if(namedGroupName != null) {
+                if (namedGroupName != null) {
                     noteBuilder.append(" (").append(namedGroupName).append(")");
                 }
                 noteBuilder.append("</li>");
