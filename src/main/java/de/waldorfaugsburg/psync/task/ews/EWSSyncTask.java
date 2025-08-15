@@ -37,8 +37,7 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
 
         final EWSClient ewsClient = getApplication().getEwsClient();
         if (!ewsClient.deleteAllContacts()) {
-            recordDeviation("Could not delete contacts");
-            return;
+            throw new IllegalStateException("Could not delete contacts");
         }
 
         final Map<Integer, Contact> contactMap = new HashMap<>();
@@ -62,7 +61,7 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
                         contactEmailMap.put(contact.getDisplayName(), outParam.getParam().getAddress());
                     } else if (contact.getEmailAddresses().tryGetValue(EmailAddressKey.EmailAddress2, outParam)) {
                         contactEmailMap.put(contact.getDisplayName(), outParam.getParam().getAddress());
-                        recordDeviation("Fallback to work email for '%s' (Id: %s) for membership in '%s'", contact.getDisplayName(), contact.getId(), group.getName());
+                        recordDeviation("Fallback to work email for '%s' (Id: %s) for membership in '%s'", contact.getDisplayName(), person.getId(), group.getName());
                     } else {
                         recordDeviation("Could not find private email for '%s' (Id: %s) for membership in '%s'", contact.getDisplayName(), person.getId(), group.getName());
                     }
@@ -82,8 +81,8 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
                 contactEmailMap.putAll(group.getExtraAddresses());
             }
 
-            if (contactEmailMap.isEmpty()) {
-                recordDeviation("No contacts found for group %s", group.getName());
+            if (contactEmailMap.size() <= 1) {
+                recordDeviation("%s contacts found for group %s", contactEmailMap.size(), group.getName());
             }
 
             Thread.sleep(2000);
@@ -151,22 +150,21 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
                 if (familyPerson.getId() == person.getId()) continue;
                 if (!procuratClient.isPersonActiveMember(rootMemberships, familyPerson)) continue;
 
-                noteBuilder.append("<li>");
+                final String namedGroupName = procuratClient.getNamedGroupName(familyPerson.getId());
+                if (namedGroupName == null) continue;
+
                 switch (familyPerson.getFamilyRole()) {
                     case "mother" -> noteBuilder.append("Mutter: ");
                     case "father" -> noteBuilder.append("Vater: ");
                     case "child" -> noteBuilder.append("Kind: ");
                 }
 
-                noteBuilder.append(familyPerson.getFirstName())
+                noteBuilder.append("<li>")
+                        .append(familyPerson.getFirstName())
                         .append(" ")
-                        .append(familyPerson.getLastName());
-
-                final String namedGroupName = procuratClient.getNamedGroupName(familyPerson.getId());
-                if (namedGroupName != null) {
-                    noteBuilder.append(" (").append(namedGroupName).append(")");
-                }
-                noteBuilder.append("</li>");
+                        .append(familyPerson.getLastName())
+                        .append(" (").append(namedGroupName).append(")")
+                        .append("</li>");
             }
             noteBuilder.append("</ul>");
         }

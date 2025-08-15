@@ -13,6 +13,17 @@ public final class ApplicationConfiguration {
 
     private ClientConfiguration clients;
     private List<AbstractSyncTaskConfiguration> tasks;
+    private MailConfiguration mail;
+
+    @NoArgsConstructor
+    @Getter
+    public static class MailConfiguration {
+        private String host;
+        private int port;
+        private String username;
+        private String password;
+        private List<String> recipients;
+    }
 
     @NoArgsConstructor
     @Getter

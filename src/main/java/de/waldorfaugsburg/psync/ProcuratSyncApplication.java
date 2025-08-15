@@ -8,6 +8,7 @@ import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
 import de.waldorfaugsburg.psync.client.starface.StarfaceClient;
 import de.waldorfaugsburg.psync.config.ApplicationConfiguration;
 import de.waldorfaugsburg.psync.config.JsonAdapter;
+import de.waldorfaugsburg.psync.mail.ApplicationMailer;
 import de.waldorfaugsburg.psync.task.AbstractSyncTaskConfiguration;
 import de.waldorfaugsburg.psync.task.SyncTaskScheduler;
 import lombok.Getter;
@@ -24,6 +25,8 @@ public class ProcuratSyncApplication {
             .create();
 
     private ApplicationConfiguration configuration;
+    private ApplicationMailer mailer;
+
     private ProcuratClient procuratClient;
     private StarfaceClient starfaceClient;
     private EWSClient ewsClient;
@@ -34,6 +37,8 @@ public class ProcuratSyncApplication {
         try (final JsonReader reader = new JsonReader(new FileReader("config.json"))) {
             configuration = GSON.fromJson(reader, ApplicationConfiguration.class);
         }
+
+        mailer = new ApplicationMailer(this);
 
         procuratClient = new ProcuratClient(configuration.getClients().getProcurat().getUrl(),
                 configuration.getClients().getProcurat().getApiKey(),
@@ -70,9 +75,6 @@ public class ProcuratSyncApplication {
                 log.error("An error occurred while disabling application", e);
             }
         }));
-
-        //SLF4JBridgeHandler.removeHandlersForRootLogger();
-        //SLF4JBridgeHandler.install();
 
         new Thread(() -> {
             try {

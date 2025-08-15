@@ -31,6 +31,7 @@ public abstract class AbstractSyncTask<T extends AbstractSyncTaskConfiguration> 
 
     private final ProcuratSyncApplication application;
     private final T configuration;
+    private final Map<ZonedDateTime, String> deviationMap = new HashMap<>();
 
     @Getter
     private final boolean runAtStartup;
@@ -40,8 +41,6 @@ public abstract class AbstractSyncTask<T extends AbstractSyncTaskConfiguration> 
 
     @Getter
     private boolean running = false;
-
-    private Map<ZonedDateTime, String> deviationMap = new HashMap<>();
 
     protected AbstractSyncTask(final ProcuratSyncApplication application, final T configuration) {
         this.application = application;
@@ -64,18 +63,28 @@ public abstract class AbstractSyncTask<T extends AbstractSyncTaskConfiguration> 
             run();
         } catch (final Exception e) {
             log.error("Error running task {}", getClass().getSimpleName(), e);
+
+            // Mail exception
+            application.getMailer().sendMail("exception", "%task%", getClass().getSimpleName(), "%error%", e.getMessage());
         } finally {
             running = false;
             log.info("Finished task {} within {}ms (next run: {})", getClass().getSimpleName(), System.currentTimeMillis() - startMillis, getNextRun());
 
             if (!deviationMap.isEmpty()) {
                 log.warn("Recorded {} deviations for task {}", deviationMap.size(), getClass().getSimpleName());
+
                 int count = 1;
+                final StringBuilder deviationHtmlList = new StringBuilder();
                 for (final Map.Entry<ZonedDateTime, String> entry : deviationMap.entrySet()) {
-                    log.warn("#{} ({}): {}", count, entry.getKey().format(DATE_TIME_FORMATTER), entry.getValue());
+                    final String formattedMessage = String.format("#%s (%s): %s", count, entry.getKey().format(DATE_TIME_FORMATTER), entry.getValue());
+                    deviationHtmlList.append("<li>").append(formattedMessage).append("</li>");
+                    log.warn(formattedMessage);
                     count++;
                 }
                 deviationMap.clear();
+
+                // Mail deviation list
+                application.getMailer().sendMail("deviations", "%task%", getClass().getSimpleName(), "%deviations%", deviationHtmlList.toString());
             }
         }
     }
@@ -98,5 +107,4 @@ public abstract class AbstractSyncTask<T extends AbstractSyncTaskConfiguration> 
     protected T getConfiguration() {
         return configuration;
     }
-
 }
