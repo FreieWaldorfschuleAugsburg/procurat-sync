@@ -43,7 +43,7 @@ public abstract class AbstractHttpClient {
 
     private ClientError parseError(final Response<?> response) throws IOException {
         final String contentType = response.headers().get("Content-Type");
-        if (contentType == null || !contentType.equals("application/json;charset=UTF-8")) {
+        if (contentType == null || !contentType.equals("application/json")) {
             throw new RuntimeException("invalid content type: " + contentType);
         }
 
