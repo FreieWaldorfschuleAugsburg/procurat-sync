@@ -129,20 +129,26 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
         noteBuilder.append("Personennummer: ").append(person.getId()).append("<br>");
         noteBuilder.append("Anschriftnummer: ").append(person.getAddressId()).append("<br>");
 
-        boolean parent = false;
+        boolean family = false;
         if (person.getFamilyRole().equals("mother")) {
-            parent = true;
+            family = true;
             noteBuilder.append("<h1>Familie</h1>");
             noteBuilder.append("Familienrolle: Mutter").append("<br>");
         }
 
         if (person.getFamilyRole().equals("father")) {
-            parent = true;
+            family = true;
             noteBuilder.append("<h1>Familie</h1>");
             noteBuilder.append("Familienrolle: Vater").append("<br>");
         }
 
-        if (parent) {
+        if (person.getFamilyRole().equals("child")) {
+            family = true;
+            noteBuilder.append("<h1>Familie</h1>");
+            noteBuilder.append("Familienrolle: Kind").append("<br>");
+        }
+
+        if (family) {
             noteBuilder.append("Weitere Familienmitglieder:");
             noteBuilder.append("<ul>");
             final List<ProcuratPerson> persons = procuratClient.getPersonsByFamilyId(person.getFamilyId());
