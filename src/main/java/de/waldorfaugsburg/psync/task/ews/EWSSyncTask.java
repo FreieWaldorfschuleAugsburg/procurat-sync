@@ -153,14 +153,15 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
                 final String namedGroupName = procuratClient.getNamedGroupName(familyPerson.getId());
                 if (namedGroupName == null) continue;
 
+                noteBuilder.append("<li>");
+
                 switch (familyPerson.getFamilyRole()) {
                     case "mother" -> noteBuilder.append("Mutter: ");
                     case "father" -> noteBuilder.append("Vater: ");
                     case "child" -> noteBuilder.append("Kind: ");
                 }
 
-                noteBuilder.append("<li>")
-                        .append(familyPerson.getFirstName())
+                noteBuilder.append(familyPerson.getFirstName())
                         .append(" ")
                         .append(familyPerson.getLastName())
                         .append(" (").append(namedGroupName).append(")")
