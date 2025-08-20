@@ -24,9 +24,10 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
 
     @Override
     public void run() throws Exception {
-        final ProcuratClient procuratClient = getApplication().getProcuratClient();
-        final List<ProcuratGroupMembership> rootGroupMemberships = procuratClient.getRootGroupMemberships();
+        final ProcuratClient procuratClient = new ProcuratClient(getApplication());
+        final EWSClient ewsClient = new EWSClient(getApplication());
 
+        final List<ProcuratGroupMembership> rootGroupMemberships = procuratClient.getRootGroupMemberships();
         final Multimap<EWSSyncTaskConfiguration.ContactGroup, EWSSyncTaskConfiguration.Selector> selectorGroupMap = ArrayListMultimap.create();
         for (final EWSSyncTaskConfiguration.ContactGroup group : getConfiguration().getGroups()) {
             selectorGroupMap.putAll(group, accumulateSelectors(procuratClient, group).stream().distinct().toList());
@@ -35,7 +36,6 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
         final long personCount = selectorGroupMap.values().stream().distinct().count();
         log.info("Aggregated a total of {} persons in {} groups for synchronisation", personCount, selectorGroupMap.keySet().size());
 
-        final EWSClient ewsClient = getApplication().getEwsClient();
         if (!ewsClient.deleteAllContacts()) {
             throw new IllegalStateException("Could not delete contacts");
         }

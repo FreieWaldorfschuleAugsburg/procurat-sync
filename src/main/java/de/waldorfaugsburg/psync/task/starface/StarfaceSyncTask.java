@@ -21,12 +21,12 @@ public final class StarfaceSyncTask extends AbstractSyncTask<StarfaceSyncTaskCon
 
     @Override
     public void run() throws Exception {
-        final StarfaceClient starfaceClient = getApplication().getStarfaceClient();
+        final ProcuratClient procuratClient = new ProcuratClient(getApplication());
+        final StarfaceClient starfaceClient = new StarfaceClient(getApplication());
 
         // Delete all contacts to start fresh
         starfaceClient.deleteAllContacts();
 
-        final ProcuratClient procuratClient = getApplication().getProcuratClient();
         final List<ProcuratPerson> persons = procuratClient.getAllPersons();
         final List<ProcuratGroupMembership> rootMemberships = procuratClient.getRootGroupMemberships();
 

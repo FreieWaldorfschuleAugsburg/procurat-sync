@@ -2,21 +2,33 @@ package de.waldorfaugsburg.psync.client.starface;
 
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import de.waldorfaugsburg.psync.client.AbstractHttpClient;
+import de.waldorfaugsburg.psync.client.ClientException;
 import de.waldorfaugsburg.psync.client.starface.model.*;
 import de.waldorfaugsburg.psync.client.starface.service.StarfaceService;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.apache.commons.codec.digest.DigestUtils;
+import retrofit2.Call;
 import retrofit2.Retrofit;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * STARFACE REST Client implementation as per official documentation
+ *
+ * @see <a href="https://knowledge.starface.de/display/SWD/REST+-+Schnittstelle">STARFACE REST documentation</a>
+ **/
 @Slf4j
 public final class StarfaceClient extends AbstractHttpClient {
 
+    // STARFACE can't display more than 4 phone numbers per contact
     private static final int MAX_NUMBERS_PER_CONTACT = 4;
+
+    // Documentation states 4 hours validity for a token - but just in case
+    private static final long TOKEN_MAX_VALIDITY_MILLIS = TimeUnit.HOURS.toMillis(3);
 
     private final String url;
     private final String userId;
@@ -26,6 +38,8 @@ public final class StarfaceClient extends AbstractHttpClient {
     private StarfaceService service;
     private String authToken;
     private StarfaceContactTag tag;
+
+    private long loginMillis;
 
     public StarfaceClient(final ProcuratSyncApplication application) {
         this.url = application.getConfiguration().getClients().getStarface().getUrl();
@@ -39,9 +53,13 @@ public final class StarfaceClient extends AbstractHttpClient {
     @Override
     protected void setup() {
         super.setup();
-
         service = getRetrofit().create(StarfaceService.class);
-        login();
+
+        try {
+            login();
+        } catch (final Exception e) {
+            log.error("Login failed", e);
+        }
 
         tag = findTagByAlias(tagName);
     }
@@ -65,6 +83,17 @@ public final class StarfaceClient extends AbstractHttpClient {
     protected Retrofit createRetrofit(final Retrofit.Builder retrofitBuilder) {
         retrofitBuilder.baseUrl(this.url);
         return retrofitBuilder.build();
+    }
+
+    @Override
+    public <T> T execute(Call<T> call) throws ClientException {
+        // If token is invalid and call isn't a login call
+        if (!isTokenValid() && !call.request().url().toString().endsWith("login")) {
+            log.info("Requesting new token due to expiration");
+            login();
+        }
+
+        return super.execute(call);
     }
 
     public StarfaceContactTag findTagByAlias(final String alias) {
@@ -135,15 +164,24 @@ public final class StarfaceClient extends AbstractHttpClient {
 
     private void login() {
         final StarfaceLogin login = execute(service.requestLogin());
-        if (login == null || login.getNonce() == null) return;
+        if (login == null || login.getNonce() == null)
+            throw new IllegalStateException("nonce invalid");
 
         final String hashedPassword = DigestUtils.sha512Hex(password);
         final String loginSecret = userId + ":" + DigestUtils.sha512Hex(userId + login.getNonce() + hashedPassword);
         login.setSecret(loginSecret);
 
         final StarfaceToken token = execute(service.login(login));
-        if (token == null || token.getToken() == null) return;
+        if (token == null || token.getToken() == null)
+            throw new IllegalStateException("token invalid");
+
         authToken = token.getToken();
+        loginMillis = System.currentTimeMillis();
+
         log.info("Login successful");
+    }
+
+    private boolean isTokenValid() {
+        return System.currentTimeMillis() - loginMillis < TOKEN_MAX_VALIDITY_MILLIS;
     }
 }

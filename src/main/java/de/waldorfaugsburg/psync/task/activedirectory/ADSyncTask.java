@@ -26,9 +26,10 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
 
     @Override
     public void run() throws Exception {
-        final ProcuratClient procuratClient = getApplication().getProcuratClient();
-        final List<ProcuratGroupMembership> rootGroupMemberships = procuratClient.getRootGroupMemberships();
+        final ProcuratClient procuratClient = new ProcuratClient(getApplication());
+        final ADClient adClient = new ADClient(getApplication());
 
+        final List<ProcuratGroupMembership> rootGroupMemberships = procuratClient.getRootGroupMemberships();
         final Multimap<ADSyncTaskConfiguration.UserMapper, ADSyncTaskConfiguration.Selector> selectorGroupMap = ArrayListMultimap.create();
         for (final ADSyncTaskConfiguration.UserMapper mapper : getConfiguration().getUserMappers()) {
             selectorGroupMap.putAll(mapper, accumulateSelectors(procuratClient, mapper).stream().distinct().toList());
@@ -36,8 +37,6 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
 
         final long personCount = selectorGroupMap.values().stream().distinct().count();
         log.info("Aggregated a total of {} persons in {} groups for synchronisation", personCount, selectorGroupMap.keySet().size());
-
-        final ADClient adClient = getApplication().getActiveDirectoryClient();
 
         final Set<Integer> processedPersonIds = new HashSet<>();
         for (final ADSyncTaskConfiguration.UserMapper mapper : selectorGroupMap.keySet()) {

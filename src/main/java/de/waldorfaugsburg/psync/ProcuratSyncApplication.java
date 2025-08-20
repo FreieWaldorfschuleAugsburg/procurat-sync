@@ -27,12 +27,6 @@ public class ProcuratSyncApplication {
 
     private ApplicationConfiguration configuration;
     private ApplicationMailer mailer;
-
-    private ProcuratClient procuratClient;
-    private StarfaceClient starfaceClient;
-    private EWSClient ewsClient;
-    private ADClient activeDirectoryClient;
-
     private SyncTaskScheduler scheduler;
 
     public void enable() throws Exception {
@@ -41,11 +35,6 @@ public class ProcuratSyncApplication {
         }
 
         mailer = new ApplicationMailer(this);
-        procuratClient = new ProcuratClient(this);
-        starfaceClient = new StarfaceClient(this);
-        ewsClient = new EWSClient(this);
-        activeDirectoryClient = new ADClient(this);
-
         scheduler = new SyncTaskScheduler(this);
     }
 
