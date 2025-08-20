@@ -13,7 +13,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 @Slf4j
-public class SyncTaskScheduler {
+public final class SyncTaskScheduler {
 
     private final ProcuratSyncApplication application;
 

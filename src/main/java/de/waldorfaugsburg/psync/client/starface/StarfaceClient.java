@@ -1,5 +1,6 @@
 package de.waldorfaugsburg.psync.client.starface;
 
+import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import de.waldorfaugsburg.psync.client.AbstractHttpClient;
 import de.waldorfaugsburg.psync.client.starface.model.*;
 import de.waldorfaugsburg.psync.client.starface.service.StarfaceService;
@@ -26,11 +27,11 @@ public final class StarfaceClient extends AbstractHttpClient {
     private String authToken;
     private StarfaceContactTag tag;
 
-    public StarfaceClient(final String url, final String userId, final String password, final String tagName) {
-        this.url = url;
-        this.userId = userId;
-        this.password = password;
-        this.tagName = tagName;
+    public StarfaceClient(final ProcuratSyncApplication application) {
+        this.url = application.getConfiguration().getClients().getStarface().getUrl();
+        this.userId = application.getConfiguration().getClients().getStarface().getUserId();
+        this.password = application.getConfiguration().getClients().getStarface().getPassword();
+        this.tagName = application.getConfiguration().getClients().getStarface().getTag();
 
         setup();
     }

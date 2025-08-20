@@ -7,7 +7,7 @@ import lombok.*;
 @Data
 @EqualsAndHashCode()
 @ToString
-public class ClientError {
+public final class ClientError {
     private String code;
     private String message;
 }

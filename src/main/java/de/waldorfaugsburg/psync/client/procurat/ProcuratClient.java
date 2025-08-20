@@ -1,5 +1,6 @@
 package de.waldorfaugsburg.psync.client.procurat;
 
+import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import de.waldorfaugsburg.psync.client.AbstractHttpClient;
 import de.waldorfaugsburg.psync.client.procurat.model.*;
 import de.waldorfaugsburg.psync.client.procurat.service.*;
@@ -34,12 +35,11 @@ public final class ProcuratClient extends AbstractHttpClient {
     @Getter
     private ProcuratCommunicationService communicationService;
 
-    public ProcuratClient(final String url, final String apiKey,
-                          final int rootGroupId, final Map<String, Integer> namedGroups) {
-        this.url = url;
-        this.apiKey = apiKey;
-        this.rootGroupId = rootGroupId;
-        this.namedGroups = namedGroups;
+    public ProcuratClient(final ProcuratSyncApplication application) {
+        this.url = application.getConfiguration().getClients().getProcurat().getUrl();
+        this.apiKey = application.getConfiguration().getClients().getProcurat().getApiKey();
+        this.rootGroupId = application.getConfiguration().getClients().getProcurat().getRootGroupId();
+        this.namedGroups = application.getConfiguration().getClients().getProcurat().getNamedGroups();
 
         setup();
     }
@@ -75,20 +75,20 @@ public final class ProcuratClient extends AbstractHttpClient {
         return getGroupMemberships(rootGroupId);
     }
 
-    public boolean isPersonActiveMember(final List<ProcuratGroupMembership> memberships, final ProcuratPerson person) {
+    public boolean isPersonInactive(final List<ProcuratGroupMembership> memberships, final int personId) {
         for (final ProcuratGroupMembership membership : memberships) {
-            if (membership.getPersonId() == person.getId()) {
+            if (membership.getPersonId() == personId) {
                 final LocalDateTime now = LocalDateTime.now();
                 final LocalDateTime entryDate = LocalDateTime.parse(membership.getEntryDate(), FORMATTER);
                 final LocalDateTime exitDate = membership.getExitDate() == null ? null : LocalDateTime.parse(membership.getExitDate(), FORMATTER);
 
                 // Check if membership is still active
                 if (now.isAfter(entryDate) && (exitDate == null || now.isBefore(exitDate))) {
-                    return true;
+                    return false;
                 }
             }
         }
-        return false;
+        return true;
     }
 
     public String getNamedGroupName(final int personId) {

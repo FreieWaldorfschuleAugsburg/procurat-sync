@@ -1,6 +1,7 @@
 package de.waldorfaugsburg.psync.client.ews;
 
 import com.microsoft.aad.msal4j.*;
+import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import lombok.extern.slf4j.Slf4j;
 import microsoft.exchange.webservices.data.core.ExchangeService;
 import microsoft.exchange.webservices.data.core.PropertySet;
@@ -48,12 +49,13 @@ public final class EWSClient {
     private FolderId contactFolderId;
     private Folder contactFolder;
 
-    public EWSClient(final String clientId, final String tenantId, final String clientSecret, final String contactFolderId, final String impersonatedUserId) {
-        this.clientId = clientId;
-        this.tenantId = tenantId;
-        this.clientSecret = clientSecret;
-        this.impersonatedUserId = impersonatedUserId;
+    public EWSClient(final ProcuratSyncApplication application) {
+        this.clientId = application.getConfiguration().getClients().getEws().getClientId();
+        this.tenantId = application.getConfiguration().getClients().getEws().getTenantId();
+        this.clientSecret = application.getConfiguration().getClients().getEws().getClientSecret();
+        this.impersonatedUserId = application.getConfiguration().getClients().getEws().getImpersonatedUserId();
 
+        final String contactFolderId = application.getConfiguration().getClients().getEws().getContactFolderId();
         try {
             this.contactFolderId = FolderId.getFolderIdFromString(contactFolderId);
         } catch (final Exception e) {

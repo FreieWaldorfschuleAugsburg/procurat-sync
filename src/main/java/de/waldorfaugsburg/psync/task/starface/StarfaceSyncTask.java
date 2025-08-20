@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
-public class StarfaceSyncTask extends AbstractSyncTask<StarfaceSyncTaskConfiguration> {
+public final class StarfaceSyncTask extends AbstractSyncTask<StarfaceSyncTaskConfiguration> {
 
     public StarfaceSyncTask(final ProcuratSyncApplication application, final StarfaceSyncTaskConfiguration configuration) {
         super(application, configuration);
@@ -32,8 +32,8 @@ public class StarfaceSyncTask extends AbstractSyncTask<StarfaceSyncTaskConfigura
 
         int count = 0;
         for (final ProcuratPerson person : persons) {
-            // Check if person is an active member of the root group
-            if (!procuratClient.isPersonActiveMember(rootMemberships, person)) {
+            // Check if person is inactive
+            if (procuratClient.isPersonInactive(rootMemberships, person.getId())) {
                 log.info("Skipping inactive person {}", person);
                 continue;
             }

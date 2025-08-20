@@ -31,6 +31,7 @@ public final class ApplicationConfiguration {
         private ProcuratClientConfiguration procurat;
         private StarfaceClientConfiguration starface;
         private EWSClientConfiguration ews;
+        private ActiveDirectoryConfiguration activeDirectory;
     }
 
     @NoArgsConstructor
@@ -59,5 +60,17 @@ public final class ApplicationConfiguration {
         private String clientSecret;
         private String contactFolderId;
         private String impersonatedUserId;
+    }
+
+    @NoArgsConstructor
+    @Getter
+    public static class ActiveDirectoryConfiguration {
+        private String domain;
+        private String host;
+        private String principal;
+        private String password;
+        private String userDN;
+        private String usernameUDF;
+        private String upnUDF;
     }
 }

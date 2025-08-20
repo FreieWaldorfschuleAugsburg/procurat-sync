@@ -1,4 +1,4 @@
-package de.waldorfaugsburg.psync.task.ews;
+package de.waldorfaugsburg.psync.task.activedirectory;
 
 import de.waldorfaugsburg.psync.task.AbstractSyncTaskConfiguration;
 import lombok.EqualsAndHashCode;
@@ -6,40 +6,40 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.Map;
 
 @Getter
 @NoArgsConstructor
-public final class EWSSyncTaskConfiguration extends AbstractSyncTaskConfiguration {
+public final class ADSyncTaskConfiguration extends AbstractSyncTaskConfiguration {
 
-    private List<ContactGroup> groups;
+    private List<UserMapper> userMappers;
 
     @NoArgsConstructor
     @Getter
-    public static class ContactGroup {
+    public static class UserMapper {
         private String name;
         private List<Selector> groups;
         private List<Selector> correspondenceGroups;
         private List<Selector> persons;
-        private Map<String, String> extraAddresses;
+        private String targetDN;
+        private List<String> targetGroups;
+        private String title;
+        private String office;
+        private String description;
     }
-
 
     @NoArgsConstructor
     @Getter
-    @EqualsAndHashCode(of = {"id", "emailType"})
+    @EqualsAndHashCode(of = {"id"})
     public static class Selector {
         private int id;
-        private String emailType;
 
         public Selector(final Selector selector, final int id) {
             this.id = id;
-            this.emailType = selector.getEmailType();
         }
     }
 
     @Override
     public Class<?> getTaskClass() {
-        return EWSSyncTask.class;
+        return ADSyncTask.class;
     }
 }

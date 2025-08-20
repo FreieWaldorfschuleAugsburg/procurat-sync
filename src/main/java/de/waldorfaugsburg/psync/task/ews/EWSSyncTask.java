@@ -16,7 +16,7 @@ import microsoft.exchange.webservices.data.property.complex.EmailAddress;
 import java.util.*;
 
 @Slf4j
-public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
+public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
 
     public EWSSyncTask(final ProcuratSyncApplication application, final EWSSyncTaskConfiguration configuration) {
         super(application, configuration);
@@ -154,7 +154,7 @@ public class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration> {
             final List<ProcuratPerson> persons = procuratClient.getPersonsByFamilyId(person.getFamilyId());
             for (final ProcuratPerson familyPerson : persons) {
                 if (familyPerson.getId() == person.getId()) continue;
-                if (!procuratClient.isPersonActiveMember(rootMemberships, familyPerson)) continue;
+                if (procuratClient.isPersonInactive(rootMemberships, familyPerson.getId())) continue;
 
                 final String namedGroupName = procuratClient.getNamedGroupName(familyPerson.getId());
                 if (namedGroupName == null) continue;

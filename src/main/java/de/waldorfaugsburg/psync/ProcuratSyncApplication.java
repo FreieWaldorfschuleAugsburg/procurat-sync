@@ -3,6 +3,7 @@ package de.waldorfaugsburg.psync;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
+import de.waldorfaugsburg.psync.client.activedirectory.ADClient;
 import de.waldorfaugsburg.psync.client.ews.EWSClient;
 import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
 import de.waldorfaugsburg.psync.client.starface.StarfaceClient;
@@ -30,6 +31,7 @@ public class ProcuratSyncApplication {
     private ProcuratClient procuratClient;
     private StarfaceClient starfaceClient;
     private EWSClient ewsClient;
+    private ADClient activeDirectoryClient;
 
     private SyncTaskScheduler scheduler;
 
@@ -39,22 +41,10 @@ public class ProcuratSyncApplication {
         }
 
         mailer = new ApplicationMailer(this);
-
-        procuratClient = new ProcuratClient(configuration.getClients().getProcurat().getUrl(),
-                configuration.getClients().getProcurat().getApiKey(),
-                configuration.getClients().getProcurat().getRootGroupId(),
-                configuration.getClients().getProcurat().getNamedGroups());
-
-        starfaceClient = new StarfaceClient(configuration.getClients().getStarface().getUrl(),
-                configuration.getClients().getStarface().getUserId(),
-                configuration.getClients().getStarface().getPassword(),
-                configuration.getClients().getStarface().getTag());
-
-        ewsClient = new EWSClient(configuration.getClients().getEws().getClientId(),
-                configuration.getClients().getEws().getTenantId(),
-                configuration.getClients().getEws().getClientSecret(),
-                configuration.getClients().getEws().getContactFolderId(),
-                configuration.getClients().getEws().getImpersonatedUserId());
+        procuratClient = new ProcuratClient(this);
+        starfaceClient = new StarfaceClient(this);
+        ewsClient = new EWSClient(this);
+        activeDirectoryClient = new ADClient(this);
 
         scheduler = new SyncTaskScheduler(this);
     }
