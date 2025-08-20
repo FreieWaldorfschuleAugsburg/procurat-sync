@@ -3,6 +3,7 @@ package de.waldorfaugsburg.psync.task.ews;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
+import de.waldorfaugsburg.psync.client.HttpClientException;
 import de.waldorfaugsburg.psync.client.ews.EWSClient;
 import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
 import de.waldorfaugsburg.psync.client.procurat.model.*;
@@ -24,8 +25,8 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
 
     @Override
     public void run() throws Exception {
-        final ProcuratClient procuratClient = new ProcuratClient(getApplication());
-        final EWSClient ewsClient = new EWSClient(getApplication());
+        final ProcuratClient procuratClient = ProcuratClient.createInstance(getApplication());
+        final EWSClient ewsClient = EWSClient.createInstance(getApplication());
 
         final List<ProcuratGroupMembership> rootGroupMemberships = procuratClient.getRootGroupMemberships();
         final Multimap<EWSSyncTaskConfiguration.ContactGroup, EWSSyncTaskConfiguration.Selector> selectorGroupMap = ArrayListMultimap.create();
@@ -90,7 +91,7 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
         }
     }
 
-    private Contact createContact(final ProcuratClient procuratClient, final EWSClient ewsClient, final List<ProcuratGroupMembership> rootMemberships, final ProcuratPerson person) {
+    private Contact createContact(final ProcuratClient procuratClient, final EWSClient ewsClient, final List<ProcuratGroupMembership> rootMemberships, final ProcuratPerson person) throws HttpClientException {
         String workEmail = null;
         String privateEmail = null;
         String homePhone = null;
@@ -180,7 +181,7 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
         return ewsClient.createContact(person.getId(), person.getFirstName(), person.getLastName(), privateEmail, workEmail, homePhone, mobilePhone, address.getCity(), address.getZip(), address.getStreet(), noteBuilder.toString());
     }
 
-    private List<EWSSyncTaskConfiguration.Selector> accumulateSelectors(final ProcuratClient client, final EWSSyncTaskConfiguration.ContactGroup group) {
+    private List<EWSSyncTaskConfiguration.Selector> accumulateSelectors(final ProcuratClient client, final EWSSyncTaskConfiguration.ContactGroup group) throws HttpClientException {
         final List<EWSSyncTaskConfiguration.Selector> selectors = new ArrayList<>();
 
         // Add group members

@@ -2,6 +2,7 @@ package de.waldorfaugsburg.psync.client.ews;
 
 import com.microsoft.aad.msal4j.*;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
+import de.waldorfaugsburg.psync.client.AbstractClient;
 import lombok.extern.slf4j.Slf4j;
 import microsoft.exchange.webservices.data.core.ExchangeService;
 import microsoft.exchange.webservices.data.core.PropertySet;
@@ -25,7 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
-public final class EWSClient {
+public final class EWSClient extends AbstractClient {
 
     private static final String EWS_URL = "https://outlook.office365.com/EWS/Exchange.asmx";
     private static final String EWS_SCOPE = "https://outlook.office365.com/.default";
@@ -44,43 +45,38 @@ public final class EWSClient {
     private final String tenantId;
     private final String clientSecret;
     private final String impersonatedUserId;
+    private final String contactFolderId;
 
     private ExchangeService service;
-    private FolderId contactFolderId;
     private Folder contactFolder;
 
-    public EWSClient(final ProcuratSyncApplication application) {
+    EWSClient(final ProcuratSyncApplication application) {
         this.clientId = application.getConfiguration().getClients().getEws().getClientId();
         this.tenantId = application.getConfiguration().getClients().getEws().getTenantId();
         this.clientSecret = application.getConfiguration().getClients().getEws().getClientSecret();
         this.impersonatedUserId = application.getConfiguration().getClients().getEws().getImpersonatedUserId();
-
-        final String contactFolderId = application.getConfiguration().getClients().getEws().getContactFolderId();
-        try {
-            this.contactFolderId = FolderId.getFolderIdFromString(contactFolderId);
-        } catch (final Exception e) {
-            log.error("Invalid contact folder id {}", contactFolderId, e);
-            return;
-        }
-
-        setup();
+        this.contactFolderId = application.getConfiguration().getClients().getEws().getContactFolderId();
     }
 
-    private void setup() {
-        try {
-            final IClientCredential credential = ClientCredentialFactory.createFromSecret(clientSecret);
-            final ConfidentialClientApplication confidentialClientApplication = ConfidentialClientApplication.builder(clientId, credential).authority(String.format(EWS_AUTHORITY, tenantId)).build();
+    public static EWSClient createInstance(final ProcuratSyncApplication application) throws Exception {
+        final EWSClient client = new EWSClient(application);
+        client.setup();
+        return client;
+    }
 
-            final ClientCredentialParameters parameters = ClientCredentialParameters.builder(Set.of(EWS_SCOPE)).build();
-            final IAuthenticationResult result = confidentialClientApplication.acquireToken(parameters).join();
-            service = new ExchangeService(ExchangeVersion.Exchange2010_SP2);
-            service.getHttpHeaders().put("Authorization", "Bearer " + result.accessToken());
-            service.setUrl(new URI(EWS_URL));
-            service.setImpersonatedUserId(new ImpersonatedUserId(ConnectingIdType.SmtpAddress, impersonatedUserId));
-            contactFolder = service.bindToFolder(contactFolderId, PropertySet.IdOnly);
-        } catch (final Exception e) {
-            log.error("Error during client setup", e);
-        }
+    @Override
+    protected void setup() throws Exception {
+        final IClientCredential credential = ClientCredentialFactory.createFromSecret(clientSecret);
+        final ConfidentialClientApplication confidentialClientApplication = ConfidentialClientApplication.builder(clientId, credential).authority(String.format(EWS_AUTHORITY, tenantId)).build();
+        final ClientCredentialParameters parameters = ClientCredentialParameters.builder(Set.of(EWS_SCOPE)).build();
+        final IAuthenticationResult result = confidentialClientApplication.acquireToken(parameters).join();
+
+        service = new ExchangeService(ExchangeVersion.Exchange2010_SP2);
+        service.getHttpHeaders().put("Authorization", "Bearer " + result.accessToken());
+        service.setUrl(new URI(EWS_URL));
+        service.setImpersonatedUserId(new ImpersonatedUserId(ConnectingIdType.SmtpAddress, impersonatedUserId));
+
+        contactFolder = service.bindToFolder(FolderId.getFolderIdFromString(contactFolderId), PropertySet.IdOnly);
     }
 
     public boolean deleteAllContacts() {
@@ -135,7 +131,7 @@ public final class EWSClient {
             contact.setPostalAddressIndex(PhysicalAddressIndex.Home);
             contact.setBody(new MessageBody(note));
             contact.setExtendedProperty(PROCURAT_ID_PROPERTY, personId);
-            contact.save(contactFolderId);
+            contact.save(contactFolder.getId());
             log.info("Created contact (name: {})", fullName);
             return contact;
         } catch (final Exception e) {
@@ -148,7 +144,7 @@ public final class EWSClient {
         try {
             final ContactGroup contactGroup = new ContactGroup(service);
             contactGroup.setDisplayName(groupName);
-            contactGroup.save(contactFolderId);
+            contactGroup.save(contactFolder.getId());
 
             displayNameAddressMap.forEach((displayName, address) -> {
                 try {

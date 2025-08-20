@@ -10,17 +10,17 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.io.IOException;
 
-public abstract class AbstractHttpClient {
+public abstract class AbstractHttpClient extends AbstractClient {
 
     public static final Gson GSON = new Gson();
     private Retrofit retrofit;
 
-    protected void setup() {
+    @Override
+    protected <T extends Exception> void setup() throws T {
         final OkHttpClient client = createClient(new OkHttpClient.Builder());
         final Retrofit.Builder builder = new Retrofit.Builder();
         builder.client(client);
         builder.addConverterFactory(GsonConverterFactory.create(GSON));
-
         retrofit = createRetrofit(builder);
     }
 
@@ -28,16 +28,16 @@ public abstract class AbstractHttpClient {
 
     protected abstract Retrofit createRetrofit(final Retrofit.Builder retrofitBuilder);
 
-    public <T> T execute(final Call<T> call) throws ClientException {
+    public <T> T execute(final Call<T> call) throws HttpClientException {
         try {
             final Response<T> response = call.execute();
             if (!response.isSuccessful()) {
-                throw new ClientException(response.code(), parseError(response));
+                throw new HttpClientException(response.code(), parseError(response));
             }
 
             return response.body();
         } catch (final IOException e) {
-            throw new ClientException(e);
+            throw new HttpClientException(e);
         }
     }
 

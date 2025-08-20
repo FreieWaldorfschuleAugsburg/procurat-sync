@@ -2,6 +2,7 @@ package de.waldorfaugsburg.psync.client.procurat;
 
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import de.waldorfaugsburg.psync.client.AbstractHttpClient;
+import de.waldorfaugsburg.psync.client.HttpClientException;
 import de.waldorfaugsburg.psync.client.procurat.model.*;
 import de.waldorfaugsburg.psync.client.procurat.service.*;
 import lombok.Getter;
@@ -35,13 +36,17 @@ public final class ProcuratClient extends AbstractHttpClient {
     @Getter
     private ProcuratCommunicationService communicationService;
 
-    public ProcuratClient(final ProcuratSyncApplication application) {
+    ProcuratClient(final ProcuratSyncApplication application) {
         this.url = application.getConfiguration().getClients().getProcurat().getUrl();
         this.apiKey = application.getConfiguration().getClients().getProcurat().getApiKey();
         this.rootGroupId = application.getConfiguration().getClients().getProcurat().getRootGroupId();
         this.namedGroups = application.getConfiguration().getClients().getProcurat().getNamedGroups();
+    }
 
-        setup();
+    public static ProcuratClient createInstance(final ProcuratSyncApplication application) throws HttpClientException {
+        final ProcuratClient client = new ProcuratClient(application);
+        client.setup();
+        return client;
     }
 
     @Override
@@ -55,23 +60,36 @@ public final class ProcuratClient extends AbstractHttpClient {
         this.communicationService = getRetrofit().create(ProcuratCommunicationService.class);
     }
 
-    public ProcuratPerson getPersonById(final int personId) {
+    @Override
+    protected OkHttpClient createClient(final OkHttpClient.Builder clientBuilder) {
+        clientBuilder.addInterceptor(chain -> chain.proceed(chain.request().newBuilder().addHeader("X-API-KEY", apiKey).build()));
+        clientBuilder.callTimeout(TIMEOUT_DURATION).connectTimeout(TIMEOUT_DURATION).readTimeout(TIMEOUT_DURATION).writeTimeout(TIMEOUT_DURATION);
+        return clientBuilder.build();
+    }
+
+    @Override
+    protected Retrofit createRetrofit(final Retrofit.Builder retrofitBuilder) {
+        retrofitBuilder.baseUrl(this.url);
+        return retrofitBuilder.build();
+    }
+
+    public ProcuratPerson getPersonById(final int personId) throws HttpClientException {
         return execute(personService.findById(personId));
     }
 
-    public List<ProcuratPerson> getAllPersons() {
+    public List<ProcuratPerson> getAllPersons() throws HttpClientException {
         return execute(personService.findAll());
     }
 
-    public List<ProcuratPerson> getPersonsByFamilyId(final int familyId) {
+    public List<ProcuratPerson> getPersonsByFamilyId(final int familyId) throws HttpClientException {
         return execute(personService.findByFamilyId(familyId));
     }
 
-    public List<ProcuratGroupMembership> getGroupMemberships(final int groupId) {
+    public List<ProcuratGroupMembership> getGroupMemberships(final int groupId) throws HttpClientException {
         return execute(groupService.findMembers(groupId));
     }
 
-    public List<ProcuratGroupMembership> getRootGroupMemberships() {
+    public List<ProcuratGroupMembership> getRootGroupMemberships() throws HttpClientException {
         return getGroupMemberships(rootGroupId);
     }
 
@@ -91,7 +109,7 @@ public final class ProcuratClient extends AbstractHttpClient {
         return true;
     }
 
-    public String getNamedGroupName(final int personId) {
+    public String getNamedGroupName(final int personId) throws HttpClientException {
         for (final String name : namedGroups.keySet()) {
             final Integer groupId = namedGroups.get(name);
             for (final ProcuratGroupMembership membership : getGroupMemberships(groupId)) {
@@ -103,32 +121,19 @@ public final class ProcuratClient extends AbstractHttpClient {
         return null;
     }
 
-    public List<ProcuratContactInformation> getContactInformationByPersonId(final int personId) {
+    public List<ProcuratContactInformation> getContactInformationByPersonId(final int personId) throws HttpClientException {
         return execute(contactInformationService.findByPersonId(personId));
     }
 
-    public List<ProcuratContactInformation> getContactInformationByAddressId(final int addressId) {
+    public List<ProcuratContactInformation> getContactInformationByAddressId(final int addressId) throws HttpClientException {
         return execute(contactInformationService.findByAddressId(addressId));
     }
 
-    public ProcuratAddress getAddressById(final int addressId) {
+    public ProcuratAddress getAddressById(final int addressId) throws HttpClientException {
         return execute(addressService.findById(addressId));
     }
 
-    public List<ProcuratCommunication> getCommunicationsByPersonId(final int personId) {
+    public List<ProcuratCommunication> getCommunicationsByPersonId(final int personId) throws HttpClientException {
         return execute(communicationService.findByPersonId(personId));
-    }
-
-    @Override
-    protected OkHttpClient createClient(final OkHttpClient.Builder clientBuilder) {
-        clientBuilder.addInterceptor(chain -> chain.proceed(chain.request().newBuilder().addHeader("X-API-KEY", apiKey).build()));
-        clientBuilder.callTimeout(TIMEOUT_DURATION).connectTimeout(TIMEOUT_DURATION).readTimeout(TIMEOUT_DURATION).writeTimeout(TIMEOUT_DURATION);
-        return clientBuilder.build();
-    }
-
-    @Override
-    protected Retrofit createRetrofit(final Retrofit.Builder retrofitBuilder) {
-        retrofitBuilder.baseUrl(this.url);
-        return retrofitBuilder.build();
     }
 }

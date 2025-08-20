@@ -1,0 +1,7 @@
+package de.waldorfaugsburg.psync.client;
+
+public abstract class AbstractClient {
+
+    protected abstract <T extends Exception> void setup() throws T;
+
+}

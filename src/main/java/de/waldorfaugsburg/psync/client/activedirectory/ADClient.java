@@ -2,7 +2,10 @@ package de.waldorfaugsburg.psync.client.activedirectory;
 
 import com.cronutils.utils.Preconditions;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
+import de.waldorfaugsburg.psync.client.AbstractClient;
+import de.waldorfaugsburg.psync.client.HttpClientException;
 import de.waldorfaugsburg.psync.client.activedirectory.model.ADUser;
+import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.naming.Context;
@@ -16,17 +19,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Slf4j
-public final class ADClient {
+public final class ADClient extends AbstractClient {
 
     private final ProcuratSyncApplication application;
     private LdapContext ldapContext;
 
-    public ADClient(final ProcuratSyncApplication application) {
+    ADClient(final ProcuratSyncApplication application) {
         this.application = application;
-        setup();
     }
 
-    private void setup() {
+    public static ADClient createInstance(final ProcuratSyncApplication application) throws NamingException {
+        final ADClient client = new ADClient(application);
+        client.setup();
+        return client;
+    }
+
+    @Override
+    protected void setup() throws NamingException {
         final Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
@@ -36,11 +45,7 @@ public final class ADClient {
         env.put(Context.SECURITY_PROTOCOL, "SSL");
         env.put("java.naming.ldap.factory.socket", UnsecuredSSLSocketFactory.class.getName());
 
-        try {
-            ldapContext = new InitialLdapContext(env, null);
-        } catch (final NamingException e) {
-            log.error("Error while trying to connect to LDAP server", e);
-        }
+        ldapContext = new InitialLdapContext(env, null);
     }
 
     public ADUser findUserByEmployeeId(final int employeeId) throws NamingException {

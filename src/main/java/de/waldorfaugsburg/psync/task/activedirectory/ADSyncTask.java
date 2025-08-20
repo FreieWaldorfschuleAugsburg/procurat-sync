@@ -4,6 +4,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.gson.JsonElement;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
+import de.waldorfaugsburg.psync.client.HttpClientException;
 import de.waldorfaugsburg.psync.client.activedirectory.ADClient;
 import de.waldorfaugsburg.psync.client.activedirectory.model.ADUser;
 import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
@@ -26,8 +27,8 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
 
     @Override
     public void run() throws Exception {
-        final ProcuratClient procuratClient = new ProcuratClient(getApplication());
-        final ADClient adClient = new ADClient(getApplication());
+        final ProcuratClient procuratClient = ProcuratClient.createInstance(getApplication());
+        final ADClient adClient = ADClient.createInstance(getApplication());
 
         final List<ProcuratGroupMembership> rootGroupMemberships = procuratClient.getRootGroupMemberships();
         final Multimap<ADSyncTaskConfiguration.UserMapper, ADSyncTaskConfiguration.Selector> selectorGroupMap = ArrayListMultimap.create();
@@ -93,7 +94,7 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
 
     private void createOrUpdateADUser(final ADClient adClient, final ProcuratClient procuratClient,
                                       final List<ProcuratGroupMembership> rootMemberships, final ADSyncTaskConfiguration.UserMapper mapper,
-                                      final ADUser adUser, final ProcuratPerson person) throws NamingException {
+                                      final ADUser adUser, final ProcuratPerson person) throws NamingException, HttpClientException {
         ProcuratGroupMembership rootMembership = null;
         for (final ProcuratGroupMembership membership : rootMemberships) {
             if (membership.getPersonId() == person.getId()) {
@@ -145,7 +146,7 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
         adClient.updateUser(adUser, upn, person.getFirstName(), person.getLastName(), mapper.getTitle(), mapper.getOffice(), mapper.getDescription());
     }
 
-    private List<ADSyncTaskConfiguration.Selector> accumulateSelectors(final ProcuratClient client, final ADSyncTaskConfiguration.UserMapper mapper) {
+    private List<ADSyncTaskConfiguration.Selector> accumulateSelectors(final ProcuratClient client, final ADSyncTaskConfiguration.UserMapper mapper) throws HttpClientException {
         final List<ADSyncTaskConfiguration.Selector> selectors = new ArrayList<>();
 
         // Add group members
