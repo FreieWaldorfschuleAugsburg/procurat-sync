@@ -150,6 +150,7 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
             noteBuilder.append("<h1>Familie</h1>");
             noteBuilder.append("Familienrolle: Kind").append("<br>");
 
+            // Display own grade
             final String namedGroupName = procuratClient.getNamedGroupName(person.getId());
             if (namedGroupName != null) {
                 noteBuilder.append("Klasse: ").append(namedGroupName).append("<br>");
@@ -161,14 +162,21 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
             noteBuilder.append("<ul>");
             final List<ProcuratPerson> persons = procuratClient.getPersonsByFamilyId(person.getFamilyId());
             for (final ProcuratPerson familyPerson : persons) {
-                if (familyPerson.getId() == person.getId()) continue;
-                if (procuratClient.isPersonInactive(rootMemberships, familyPerson.getId())) continue;
+                // Ignore self
+                if (familyPerson.getId() == person.getId())
+                    continue;
 
+                // Ignore inactive persons
+                if (procuratClient.isPersonInactive(rootMemberships, familyPerson.getId()))
+                    continue;
+
+                // Ignore persons that aren't school children
                 final String namedGroupName = procuratClient.getNamedGroupName(familyPerson.getId());
-                if (namedGroupName == null) continue;
+                if (namedGroupName == null && familyPerson.getFamilyRole().equals("child"))
+                    continue;
 
+                // Create entry
                 noteBuilder.append("<li>");
-
                 switch (familyPerson.getFamilyRole()) {
                     case "mother" -> noteBuilder.append("Mutter: ");
                     case "father" -> noteBuilder.append("Vater: ");
@@ -177,9 +185,13 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
 
                 noteBuilder.append(familyPerson.getFirstName())
                         .append(" ")
-                        .append(familyPerson.getLastName())
-                        .append(" (").append(namedGroupName).append(")")
-                        .append("</li>");
+                        .append(familyPerson.getLastName());
+
+                if (namedGroupName != null) {
+                    noteBuilder.append(" (").append(namedGroupName).append(")");
+                }
+
+                noteBuilder.append("</li>");
             }
             noteBuilder.append("</ul>");
         }
