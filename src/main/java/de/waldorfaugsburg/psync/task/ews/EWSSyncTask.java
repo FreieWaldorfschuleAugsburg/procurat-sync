@@ -149,6 +149,11 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
             family = true;
             noteBuilder.append("<h1>Familie</h1>");
             noteBuilder.append("Familienrolle: Kind").append("<br>");
+
+            final String namedGroupName = procuratClient.getNamedGroupName(person.getId());
+            if (namedGroupName != null) {
+                noteBuilder.append("Klasse: ").append(namedGroupName).append("<br>");
+            }
         }
 
         if (family) {
