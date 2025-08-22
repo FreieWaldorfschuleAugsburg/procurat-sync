@@ -3,9 +3,7 @@ package de.waldorfaugsburg.psync.client.activedirectory;
 import com.cronutils.utils.Preconditions;
 import de.waldorfaugsburg.psync.ProcuratSyncApplication;
 import de.waldorfaugsburg.psync.client.AbstractClient;
-import de.waldorfaugsburg.psync.client.HttpClientException;
 import de.waldorfaugsburg.psync.client.activedirectory.model.ADUser;
-import de.waldorfaugsburg.psync.client.procurat.ProcuratClient;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.naming.Context;
@@ -14,6 +12,7 @@ import javax.naming.NamingException;
 import javax.naming.directory.*;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -228,5 +227,10 @@ public final class ADClient extends AbstractClient {
     private static byte[] getPasswordBytes(final String password) {
         final String quotedPassword = "\"" + password + "\"";
         return quotedPassword.getBytes(StandardCharsets.UTF_16LE);
+    }
+
+    @Override
+    public void close() throws Exception {
+        ldapContext.close();
     }
 }

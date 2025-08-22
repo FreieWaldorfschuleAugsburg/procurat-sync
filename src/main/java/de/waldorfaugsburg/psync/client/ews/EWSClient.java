@@ -161,4 +161,9 @@ public final class EWSClient extends AbstractClient {
             log.error("Error adding contact group {}", groupName, e);
         }
     }
+
+    @Override
+    public void close() throws Exception {
+        service.close();
+    }
 }

@@ -60,4 +60,8 @@ public abstract class AbstractHttpClient extends AbstractClient {
     protected Retrofit getRetrofit() {
         return retrofit;
     }
+
+    @Override
+    public void close() throws Exception {
+    }
 }

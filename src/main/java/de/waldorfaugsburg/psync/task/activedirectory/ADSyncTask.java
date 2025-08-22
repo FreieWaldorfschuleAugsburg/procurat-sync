@@ -90,6 +90,8 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
                         adUser.getSAMAccountName(), person.getId());
             }
         }
+
+        adClient.close();
     }
 
     private void createOrUpdateADUser(final ADClient adClient, final ProcuratClient procuratClient,

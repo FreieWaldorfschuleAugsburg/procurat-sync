@@ -89,6 +89,8 @@ public final class EWSSyncTask extends AbstractSyncTask<EWSSyncTaskConfiguration
             Thread.sleep(2000);
             ewsClient.createContactGroup(group.getName(), contactEmailMap);
         }
+
+        ewsClient.close();
     }
 
     private Contact createContact(final ProcuratClient procuratClient, final EWSClient ewsClient, final List<ProcuratGroupMembership> rootMemberships, final ProcuratPerson person) throws HttpClientException {
