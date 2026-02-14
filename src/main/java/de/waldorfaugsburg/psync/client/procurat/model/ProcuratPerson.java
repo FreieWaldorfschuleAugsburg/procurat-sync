@@ -35,4 +35,8 @@ public final class ProcuratPerson {
     private String maritalStatus;
     private String deathDate;
 
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
 }
