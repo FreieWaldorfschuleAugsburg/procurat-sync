@@ -18,6 +18,7 @@ public final class ADUser {
     private String cn;
     private String givenName;
     private String sn;
+    private String mail;
     private String sAMAccountName;
     private String userPrincipalName;
     private Integer employeeId;
@@ -34,6 +35,7 @@ public final class ADUser {
         cn = getAttributeStringValue(attributes, "cn");
         givenName = getAttributeStringValue(attributes, "givenName");
         sn = getAttributeStringValue(attributes, "sn");
+        mail = getAttributeStringValue(attributes, "mail");
         sAMAccountName = getAttributeStringValue(attributes, "sAMAccountName");
         userPrincipalName = getAttributeStringValue(attributes, "userPrincipalName");
         employeeId = getAttributeIntegerValue(attributes, "employeeID");

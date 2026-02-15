@@ -54,7 +54,7 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
                         adUser = adClient.findUserByEmployeeId(selector.getId());
                     } catch (final Exception e) {
                         recordDeviation("Unable to update/create AD user for person '%s' (Id: %s): %s",
-                                person.getId(), person.getFirstName() + " " + person.getLastName(),
+                                person.getId(), person.getFullName(),
                                 e.getMessage());
                     }
 
@@ -86,7 +86,7 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
             if (adUser.mustChangePassword()) {
                 final ProcuratPerson person = procuratClient.getPersonById(adUser.getEmployeeId());
                 recordDeviation("Pending password change for user %s (Username: %s | Id: %s)",
-                        person.getLastName() + " " + person.getFirstName(),
+                        person.getFullName(),
                         adUser.getSAMAccountName(), person.getId());
             }
         }
@@ -109,6 +109,13 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
             throw new IllegalStateException("inactive person " + person.getId());
         }
 
+        // Check if sync disabled
+        final String noSyncUDF = getApplication().getConfiguration().getClients().getActiveDirectory().getNoSyncUDF();
+        final JsonElement noSyncElement = rootMembership.getJsonData().get(noSyncUDF);
+        if (noSyncElement != null && noSyncElement.getAsBoolean()) {
+            return;
+        }
+
         // Get username from UDF
         final String usernameUDF = getApplication().getConfiguration().getClients().getActiveDirectory().getUsernameUDF();
         final JsonElement usernameElement = rootMembership.getJsonData().get(usernameUDF);
@@ -118,24 +125,45 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
 
         final String username = usernameElement.getAsString();
 
-        // Get UPN from ContactInformation
+        // Check if mail should be UPN
+        final String noUpnUDF = getApplication().getConfiguration().getClients().getActiveDirectory().getNoUpnUDF();
+        final JsonElement noUpnElement = rootMembership.getJsonData().get(noUpnUDF);
+        boolean mailAsUpn = noUpnElement == null || !noUpnElement.getAsBoolean();
+
+        // Find work mail from ContactInformation
         final List<ProcuratContactInformation> personContactInformation = procuratClient.getContactInformationByPersonId(person.getId());
-        String upn = null;
+        String mail = null;
         for (final ProcuratContactInformation information : personContactInformation) {
             if (information.getMedium().equals("email") && information.getType().equals("work") && !information.isSecret()) {
-                upn = information.getContent();
+                mail = information.getContent();
             }
         }
 
-        if (upn == null) {
-            throw new IllegalStateException("no UPN found for person " + person.getId());
+        // No work mail found
+        if (mail == null) {
+            // Find private mail from ContactInformation
+            for (final ProcuratContactInformation information : personContactInformation) {
+                if (information.getMedium().equals("email") && information.getType().equals("private") && !information.isSecret()) {
+                    mail = information.getContent();
+                }
+            }
+
+            // Private mail can't be UPN
+            if (mail != null && mailAsUpn) {
+                mailAsUpn = false;
+                recordDeviation("Consider enabling noUPN for person " + person.getId());
+            }
+        }
+
+        if (mail == null) {
+            throw new IllegalStateException("no mail found for person " + person.getId());
         }
 
         // Create user if null
         if (adUser == null) {
             final String password = "Start" + person.getId() + "#" + person.getId();
-            adClient.createUser(mapper.getTargetDN(), person.getId(), username, upn, person.getFirstName(),
-                    person.getLastName(), password, mapper.getTitle(), mapper.getOffice(), mapper.getDescription());
+            adClient.createUser(mapper.getTargetDN(), person.getId(), username, mail, person.getFirstName(),
+                    person.getLastName(), password, mapper.getTitle(), mapper.getOffice(), mapper.getDescription(), mailAsUpn);
             return;
         }
 
@@ -145,7 +173,7 @@ public final class ADSyncTask extends AbstractSyncTask<ADSyncTaskConfiguration> 
                     adUser.getCn(), adUser.getSAMAccountName(), adUser.getEmployeeId());
         }
 
-        adClient.updateUser(adUser, upn, person.getFirstName(), person.getLastName(), mapper.getTitle(), mapper.getOffice(), mapper.getDescription());
+        adClient.updateUser(adUser, mail, person.getFirstName(), person.getLastName(), mapper.getTitle(), mapper.getOffice(), mapper.getDescription(), mailAsUpn);
     }
 
     private List<ADSyncTaskConfiguration.Selector> accumulateSelectors(final ProcuratClient client, final ADSyncTaskConfiguration.UserMapper mapper) throws HttpClientException {

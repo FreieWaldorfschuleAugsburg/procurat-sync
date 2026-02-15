@@ -102,9 +102,9 @@ public final class ADClient extends AbstractClient {
         return users;
     }
 
-    public void createUser(final String targetDN, final int employeeId, final String username, final String upn,
+    public void createUser(final String targetDN, final int employeeId, final String username, final String mail,
                            final String firstName, final String lastName, final String password, final String title,
-                           final String office, final String description) throws NamingException {
+                           final String office, final String description, final boolean mailAsUpn) throws NamingException {
         final Attributes attributes = new BasicAttributes();
         final Attribute objectClassAttribute = new BasicAttribute("objectClass");
         objectClassAttribute.add("person");
@@ -118,7 +118,7 @@ public final class ADClient extends AbstractClient {
         attributes.put("displayName", fullName);
         attributes.put("givenName", firstName);
         attributes.put("sn", lastName);
-        attributes.put("mail", upn);
+        attributes.put("mail", mail);
         attributes.put("sAMAccountName", username);
         attributes.put("employeeID", Integer.toString(employeeId));
         attributes.put("title", title);
@@ -127,7 +127,9 @@ public final class ADClient extends AbstractClient {
 
         // NORMAL_ACCOUNT = 0x200 (dec. 512)
         attributes.put("userAccountControl", "512");
-        attributes.put("userPrincipalName", upn);
+        if (mailAsUpn) {
+            attributes.put("userPrincipalName", mail);
+        }
         attributes.put("unicodePwd", getPasswordBytes(password));
         // pwdLastSet = 0 (user has to change password on next login)
         attributes.put("pwdLastSet", "0");
@@ -136,16 +138,21 @@ public final class ADClient extends AbstractClient {
         log.info("Created user '{}'", dn);
     }
 
-    public void updateUser(final ADUser user, final String upn, final String firstName, final String lastName,
-                           final String title, final String office, final String description) throws NamingException {
+    public void updateUser(final ADUser user, final String mail, final String firstName, final String lastName,
+                           final String title, final String office, final String description, final boolean mailAsUpn) throws NamingException {
 
         final List<ModificationItem> modifications = new ArrayList<>();
 
         // TODO what about CN ? how to fully rename user ?
 
+        // Mail
+        if (!mail.equals(user.getMail())) {
+            modifications.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("mail", mail)));
+        }
+
         // UPN
-        if (!upn.equals(user.getUserPrincipalName())) {
-            modifications.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("userPrincipalName", upn)));
+        if (mailAsUpn && !mail.equals(user.getUserPrincipalName())) {
+            modifications.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("userPrincipalName", mail)));
         }
 
         // First name

@@ -72,5 +72,7 @@ public final class ApplicationConfiguration {
         private String userDN;
         private String usernameUDF;
         private String upnUDF;
+        private String noUpnUDF;
+        private String noSyncUDF;
     }
 }
