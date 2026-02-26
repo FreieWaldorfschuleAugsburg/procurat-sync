@@ -49,7 +49,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>de.waldorfaugsburg.sync.SyncApplication</mainClass>
+                            <mainClass>de.waldorfaugsburg.syncer.SyncerApplication</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
