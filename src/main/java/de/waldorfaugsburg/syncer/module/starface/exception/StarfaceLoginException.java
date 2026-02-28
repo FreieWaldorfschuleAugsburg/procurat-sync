@@ -1,4 +1,4 @@
-package de.waldorfaugsburg.syncer.client.starface.exception;
+package de.waldorfaugsburg.syncer.module.starface.exception;
 
 public class StarfaceLoginException extends Exception {
 

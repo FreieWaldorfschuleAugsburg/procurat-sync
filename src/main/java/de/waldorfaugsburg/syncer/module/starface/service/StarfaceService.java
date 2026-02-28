@@ -1,6 +1,6 @@
-package de.waldorfaugsburg.syncer.client.starface.service;
+package de.waldorfaugsburg.syncer.module.starface.service;
 
-import de.waldorfaugsburg.syncer.client.starface.model.*;
+import de.waldorfaugsburg.syncer.module.starface.model.*;
 import retrofit2.Call;
 import retrofit2.http.*;
 
@@ -12,7 +12,7 @@ public interface StarfaceService {
     Call<StarfaceLogin> requestLogin();
 
     @POST("login")
-    Call<StarfaceToken> login(@Body StarfaceLogin login);
+    Call<StarfaceTokenResponse> login(@Body StarfaceLogin login);
 
     @GET("contacts")
     Call<StarfaceContactSearchResult> findContacts(@Query("tags") final String tagIds, @Query("page") final int page, @Query("pagesize") final int pageSize);

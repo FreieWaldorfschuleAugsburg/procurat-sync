@@ -1,4 +1,4 @@
-package de.waldorfaugsburg.syncer.client.starface.model;
+package de.waldorfaugsburg.syncer.module.starface.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

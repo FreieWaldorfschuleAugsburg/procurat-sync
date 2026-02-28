@@ -11,7 +11,7 @@ import java.util.Map;
 public class ModuleRegistry {
 
     private final SyncerApplication application;
-    private final Map<Class<?>, AbstractModule> instanceMap = new HashMap<>();
+    private final Map<Class<? extends AbstractModule>, AbstractModule> instanceMap = new HashMap<>();
 
     public ModuleRegistry(final SyncerApplication application) {
         this.application = application;

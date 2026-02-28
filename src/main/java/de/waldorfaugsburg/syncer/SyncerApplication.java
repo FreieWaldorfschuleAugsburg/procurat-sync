@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import de.waldorfaugsburg.syncer.config.ApplicationConfiguration;
 import de.waldorfaugsburg.syncer.mail.ApplicationMailer;
-import de.waldorfaugsburg.syncer.task.SyncTaskScheduler;
+import de.waldorfaugsburg.syncer.module.ModuleRegistry;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,18 +19,17 @@ public class SyncerApplication {
 
     private ApplicationConfiguration configuration;
     private ApplicationMailer mailer;
-    private SyncTaskScheduler scheduler;
+
+    private ModuleRegistry moduleRegistry;
 
     public void enable() throws Exception {
         configuration = loadConfiguration("app.json", ApplicationConfiguration.class);
         mailer = new ApplicationMailer(this);
-        scheduler = new SyncTaskScheduler(this);
+
+        moduleRegistry = new ModuleRegistry(this);
     }
 
     public void disable() throws Exception {
-        if (scheduler != null) {
-            scheduler.stopTasks();
-        }
     }
 
     public <T> T loadConfiguration(final String fileName, final Class<T> clazz) throws Exception {
@@ -67,5 +66,4 @@ public class SyncerApplication {
             log.error("An error occurred while interrupting", e);
         }
     }
-
 }
