@@ -24,27 +24,32 @@ public class ModuleRegistry {
         }
 
         try {
-            final T moduleInstance = moduleClass.getConstructor(SyncerApplication.class).newInstance(application);
+            final T moduleInstance = moduleClass.getDeclaredConstructor(SyncerApplication.class).newInstance(application);
             instanceMap.put(moduleClass, moduleInstance);
+            log.info("Initialize module instance {}", moduleClass.getSimpleName());
             moduleInstance.init();
 
             return moduleInstance;
         } catch (final InstantiationException | IllegalAccessException | InvocationTargetException |
                        NoSuchMethodException e) {
-            log.info("Error creating module instance", e);
+            log.info("Error creating module instance {}", moduleClass.getSimpleName(), e);
             throw new RuntimeException(e);
         } catch (final Exception e) {
-            log.info("Error initializing module instance", e);
+            log.info("Error initializing module instance {}", moduleClass.getSimpleName(), e);
             throw new RuntimeException(e);
         }
     }
 
     public <T extends AbstractModule> void destroyInstance(final Class<T> moduleClass) {
         final AbstractModule module = instanceMap.remove(moduleClass);
+        if (module == null)
+            return;
+
         try {
+            log.info("Destroy module instance {}", moduleClass.getSimpleName());
             module.destroy();
         } catch (final Exception e) {
-            log.info("Error destroying module instance", e);
+            log.info("Error destroying module instance {}", moduleClass.getSimpleName(), e);
             throw new RuntimeException(e);
         }
     }

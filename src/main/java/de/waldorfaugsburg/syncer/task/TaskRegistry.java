@@ -22,26 +22,31 @@ public class TaskRegistry {
         this.application = application;
 
         registerTasks();
+        loadConfigurations();
+        startScheduler();
     }
 
     private void registerTasks() {
         taskMap.put(StarfaceContactsTask.class, new StarfaceContactsTask(application));
     }
 
-    private void startScheduler() {
+    private void loadConfigurations() {
         for (final AbstractTask<?> task : taskMap.values()) {
             try {
                 task.loadConfiguration();
+                log.info("Task {} configuration loaded", task.getClass().getSimpleName());
             } catch (final Exception e) {
                 taskMap.remove(task.getClass());
                 log.error("Error while loading task configuration. Task {} disabled", task.getClass().getSimpleName(), e);
             }
         }
+    }
 
+    private void startScheduler() {
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                final ZonedDateTime now = ZonedDateTime.now();
+                final ZonedDateTime now = ZonedDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
                 for (final AbstractTask<?> task : taskMap.values()) {
                     if (task instanceof AbstractScheduledTask<?> scheduledTask) {
@@ -50,6 +55,7 @@ public class TaskRegistry {
                         }
                     }
                 }
+
             }
         }, 0, 1000);
     }

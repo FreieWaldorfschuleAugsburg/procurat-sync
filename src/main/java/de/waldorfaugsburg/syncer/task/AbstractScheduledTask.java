@@ -9,13 +9,17 @@ import com.cronutils.parser.CronParser;
 import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.AbstractModule;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
+@Slf4j
 public abstract class AbstractScheduledTask<C extends ScheduledTaskConfiguration> extends AbstractTask<C> {
 
     private static final CronDefinition CRON_DEFINITION = CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX);
     private static final CronParser CRON_PARSER = new CronParser(CRON_DEFINITION);
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Getter
     private ZonedDateTime nextRun;
@@ -34,5 +38,6 @@ public abstract class AbstractScheduledTask<C extends ScheduledTaskConfiguration
 
         final Cron interval = CRON_PARSER.parse(getConfiguration().getCron());
         nextRun = ExecutionTime.forCron(interval).nextExecution(ZonedDateTime.now()).orElseThrow();
+        log.info("Task {} scheduled for {}", this.getClass().getSimpleName(), nextRun.format(FORMATTER));
     }
 }

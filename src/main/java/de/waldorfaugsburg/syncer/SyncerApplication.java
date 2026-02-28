@@ -6,8 +6,13 @@ import com.google.gson.stream.JsonReader;
 import de.waldorfaugsburg.syncer.config.ApplicationConfiguration;
 import de.waldorfaugsburg.syncer.mail.ApplicationMailer;
 import de.waldorfaugsburg.syncer.module.ModuleRegistry;
+import de.waldorfaugsburg.syncer.task.TaskRegistry;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import java.io.FileReader;
 
@@ -21,12 +26,17 @@ public class SyncerApplication {
     private ApplicationMailer mailer;
 
     private ModuleRegistry moduleRegistry;
+    private TaskRegistry taskRegistry;
 
     public void enable() throws Exception {
+        Logger logger = LogManager.getRootLogger();
+        Configurator.setAllLevels(logger.getName(), Level.getLevel("DEBUG"));
+
         configuration = loadConfiguration("app.json", ApplicationConfiguration.class);
         mailer = new ApplicationMailer(this);
 
         moduleRegistry = new ModuleRegistry(this);
+        taskRegistry = new TaskRegistry(this);
     }
 
     public void disable() throws Exception {

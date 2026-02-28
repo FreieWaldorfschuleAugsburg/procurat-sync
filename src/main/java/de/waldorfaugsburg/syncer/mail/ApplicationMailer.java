@@ -28,8 +28,6 @@ public final class ApplicationMailer {
     private final SyncerApplication application;
     private final Mailer mailer;
 
-    private final Map<String, MailTemplate> templateMap = new HashMap<>();
-
     public ApplicationMailer(final SyncerApplication application) {
         this.application = application;
         this.mailer = MailerBuilder
@@ -40,85 +38,6 @@ public final class ApplicationMailer {
                         application.getConfiguration().getMail().getPassword())
                 .withTransportStrategy(TransportStrategy.SMTP_TLS)
                 .buildMailer();
-
-        loadTemplates();
-    }
-
-    private void loadTemplates() {
-        try {
-            final String jarPath;
-            jarPath = "jar:file:" + getClass().getProtectionDomain()
-                    .getCodeSource()
-                    .getLocation()
-                    .toURI()
-                    .getPath();
-
-            try (final FileSystem fileSystem = FileSystems.newFileSystem(URI.create(jarPath), Collections.emptyMap())) {
-                final List<Path> templates;
-                try (final Stream<Path> stream = Files.walk(fileSystem.getPath("mailTemplates/"))) {
-                    templates = stream.filter(Files::isRegularFile).toList();
-                }
-
-                for (final Path path : templates) {
-                    try {
-                        final String name = FilenameUtils.removeExtension(path.getFileName().toString());
-                        final String content = Files.readString(path);
-                        final Document document = Jsoup.parse(content);
-                        templateMap.put(name, new MailTemplate(name, document.title(), document.body().html()));
-                        log.info("Registered mail template {}", name);
-                    } catch (final IOException e) {
-                        log.error("Error while reading mail template '{}'", path, e);
-                    }
-                }
-            }
-        } catch (final IOException | URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void sendMail(final String templateName, final String... replacements) {
-        final MailTemplate mailTemplate = templateMap.get(templateName);
-        if (mailTemplate == null) {
-            throw new IllegalArgumentException("Invalid template: " + templateName);
-        }
-
-        sendMail(application.getConfiguration().getMail().getRecipients(), mailTemplate, replacements);
-    }
-
-    public void sendMail(final List<String> recipients, final MailTemplate template, final String... replacements) {
-        Preconditions.checkNotNull(recipients, "recipients may not be null");
-        Preconditions.checkNotNull(template, "template may not be null");
-        Preconditions.checkNotNull(replacements, "replacements may not be null");
-
-        // Handling parameters
-        String subject = applyReplacements(template.subject(), replacements);
-        String content = template.content();
-        Preconditions.checkNotNull(content, "content may not be null");
-
-        content = applyReplacements(content, replacements);
-
-        // Sending mail
-        final Email email = EmailBuilder.startingBlank()
-                .toMultiple(recipients)
-                .from(application.getConfiguration().getMail().getUsername())
-                .withSubject(subject)
-                .withHTMLText(content)
-                .buildEmail();
-        mailer.sendMail(email, true).whenComplete((it, throwable) -> {
-            if (throwable != null) {
-                log.error("An error occurred while sending mail with template '{}' to '{}'", template.name(), recipients, throwable);
-                return;
-            }
-
-            log.info("Mail with template '{}' successfully sent to '{}'", template.name(), recipients);
-        });
-    }
-
-    private String applyReplacements(String initialString, final String... replacements) {
-        for (int i = 0; i < replacements.length; i += 2) {
-            initialString = initialString.replace(replacements[i], replacements[i + 1]);
-        }
-        return initialString;
     }
 
 }

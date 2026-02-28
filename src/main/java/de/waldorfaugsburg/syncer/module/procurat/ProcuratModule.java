@@ -10,6 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public class ProcuratModule extends AbstractModule {
     private ProcuratAddressService addressService;
     private ProcuratCommunicationService communicationService;
 
-    protected ProcuratModule(final SyncerApplication application) {
+    public ProcuratModule(final SyncerApplication application) {
         super(application);
     }
 
@@ -55,6 +56,23 @@ public class ProcuratModule extends AbstractModule {
     @Override
     public void destroy() throws Exception {
 
+    }
+
+    public boolean isPersonInactive(final List<ProcuratGroupMembership> memberships, final int personId) {
+        final LocalDateTime now = LocalDateTime.now();
+
+        for (final ProcuratGroupMembership membership : memberships) {
+            if (membership.getPersonId() == personId) {
+                final LocalDateTime entryDate = LocalDateTime.parse(membership.getEntryDate(), FORMATTER);
+                final LocalDateTime exitDate = membership.getExitDate() == null ? null : LocalDateTime.parse(membership.getExitDate(), FORMATTER);
+
+                // Check if membership is still active
+                if (now.isAfter(entryDate) && (exitDate == null || now.isBefore(exitDate))) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public ProcuratPerson getPersonById(final int personId) throws IOException {

@@ -51,12 +51,15 @@ public abstract class AbstractTask<C> {
         }
 
         try {
+            log.info("Task {} pre-run", getClass().getSimpleName());
             preRun();
             running = true;
 
+            log.info("Task {} run", getClass().getSimpleName());
             run();
 
             running = false;
+            log.info("Task {} post-run", getClass().getSimpleName());
             postRun();
         } catch (final Exception e) {
             log.error("Error while running task", e);
