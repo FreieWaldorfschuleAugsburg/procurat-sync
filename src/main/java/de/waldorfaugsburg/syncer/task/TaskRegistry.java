@@ -1,21 +1,20 @@
 package de.waldorfaugsburg.syncer.task;
 
 import de.waldorfaugsburg.syncer.SyncerApplication;
+import de.waldorfaugsburg.syncer.module.ews.task.EWSAddressBookTask;
 import de.waldorfaugsburg.syncer.module.starface.task.StarfaceContactsTask;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 @Slf4j
 public class TaskRegistry {
 
     private final SyncerApplication application;
-    private final Map<Class<? extends AbstractTask<?>>, AbstractTask<?>> taskMap = new HashMap<>();
+    private final Set<AbstractTask> tasks = new HashSet<>();
     private final Timer timer = new Timer();
 
     public TaskRegistry(final SyncerApplication application) {
@@ -27,16 +26,21 @@ public class TaskRegistry {
     }
 
     private void registerTasks() {
-        taskMap.put(StarfaceContactsTask.class, new StarfaceContactsTask(application));
+        tasks.add(new StarfaceContactsTask(application));
+        tasks.add(new EWSAddressBookTask(application));
     }
 
     private void loadConfigurations() {
-        for (final AbstractTask<?> task : taskMap.values()) {
+        final Iterator<AbstractTask> iterator = tasks.iterator();
+        while (iterator.hasNext()) {
+            final AbstractTask task = iterator.next();
+
             try {
-                task.loadConfiguration();
-                log.info("Task {} configuration loaded", task.getClass().getSimpleName());
+                if (task.loadConfiguration()) {
+                    log.info("Task {} configuration loaded", task.getClass().getSimpleName());
+                }
             } catch (final Exception e) {
-                taskMap.remove(task.getClass());
+                iterator.remove();
                 log.error("Error while loading task configuration. Task {} disabled", task.getClass().getSimpleName(), e);
             }
         }
@@ -48,8 +52,8 @@ public class TaskRegistry {
             public void run() {
                 final ZonedDateTime now = ZonedDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
-                for (final AbstractTask<?> task : taskMap.values()) {
-                    if (task instanceof AbstractScheduledTask<?> scheduledTask) {
+                for (final AbstractTask task : tasks) {
+                    if (task instanceof AbstractScheduledTask scheduledTask) {
                         if (scheduledTask.getNextRun().truncatedTo(ChronoUnit.SECONDS).isEqual(now)) {
                             task.invoke();
                         }

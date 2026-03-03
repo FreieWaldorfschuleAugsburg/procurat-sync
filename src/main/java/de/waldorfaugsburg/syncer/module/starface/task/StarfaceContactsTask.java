@@ -7,19 +7,16 @@ import de.waldorfaugsburg.syncer.module.procurat.model.ProcuratGroupMembership;
 import de.waldorfaugsburg.syncer.module.procurat.model.ProcuratPerson;
 import de.waldorfaugsburg.syncer.module.starface.StarfaceModule;
 import de.waldorfaugsburg.syncer.task.AbstractScheduledTask;
-import de.waldorfaugsburg.syncer.task.ScheduledTaskConfiguration;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
-public class StarfaceContactsTask extends AbstractScheduledTask<StarfaceContactsTask.Config> {
+public class StarfaceContactsTask extends AbstractScheduledTask {
 
     public StarfaceContactsTask(final SyncerApplication application) {
-        super(application, "starface_contacts.json", StarfaceContactsTask.Config.class, ProcuratModule.class, StarfaceModule.class);
+        super(application, "starface_contacts.json", ProcuratModule.class, StarfaceModule.class);
     }
 
     @Override
@@ -71,8 +68,7 @@ public class StarfaceContactsTask extends AbstractScheduledTask<StarfaceContacts
             // Remove possible duplicate home phone number
             phoneNumbers.remove(homePhone);
 
-            log.debug("Create contact (id: {}, name: {}, homePhone: {}, numbers: {})",
-                    person.getId(), person.getFullName(), homePhone, String.join(";", phoneNumbers));
+            log.debug("Create contact (id: {}, name: {}, homePhone: {}, numbers: {})", person.getId(), person.getFullName(), homePhone, String.join(";", phoneNumbers));
             starfaceModule.createContact(person.getFirstName(), person.getLastName(), homePhone, phoneNumbers);
 
             count++;
@@ -83,10 +79,5 @@ public class StarfaceContactsTask extends AbstractScheduledTask<StarfaceContacts
 
     private String normalizePhoneNumber(final String phoneNumber) {
         return phoneNumber.replaceAll("[^\\d.]+", "");
-    }
-
-    @NoArgsConstructor
-    @Getter
-    public static class Config extends ScheduledTaskConfiguration {
     }
 }

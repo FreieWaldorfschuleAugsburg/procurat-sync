@@ -15,7 +15,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Slf4j
-public abstract class AbstractScheduledTask<C extends ScheduledTaskConfiguration> extends AbstractTask<C> {
+public abstract class AbstractScheduledTask extends AbstractTask {
 
     private static final CronDefinition CRON_DEFINITION = CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX);
     private static final CronParser CRON_PARSER = new CronParser(CRON_DEFINITION);
@@ -25,19 +25,38 @@ public abstract class AbstractScheduledTask<C extends ScheduledTaskConfiguration
     private ZonedDateTime nextRun;
 
     @SafeVarargs
+    public AbstractScheduledTask(final SyncerApplication application, final String configurationPath,
+                                 final Class<? extends AbstractModule>... modules) {
+        this(application, configurationPath, ScheduledTaskConfiguration.class, modules);
+    }
+
+    @SafeVarargs
     public AbstractScheduledTask(final SyncerApplication application,
                                  final String configurationPath,
-                                 final Class<C> configurationClass,
+                                 final Class<? extends ScheduledTaskConfiguration> configurationClass,
                                  final Class<? extends AbstractModule>... modules) {
         super(application, configurationPath, configurationClass, modules);
     }
 
     @Override
-    public void loadConfiguration() throws Exception {
+    public boolean loadConfiguration() throws Exception {
         super.loadConfiguration();
 
-        final Cron interval = CRON_PARSER.parse(getConfiguration().getCron());
-        nextRun = ExecutionTime.forCron(interval).nextExecution(ZonedDateTime.now()).orElseThrow();
-        log.info("Task {} scheduled for {}", this.getClass().getSimpleName(), nextRun.format(FORMATTER));
+        if (getConfiguration() == null) {
+            throw new IllegalStateException("configuration is null");
+        }
+
+        final ScheduledTaskConfiguration configuration = (ScheduledTaskConfiguration) getConfiguration();
+        final Cron cron = CRON_PARSER.parse(configuration.getCron());
+        nextRun = ExecutionTime.forCron(cron).nextExecution(ZonedDateTime.now()).orElseThrow();
+        log.info("Task {} scheduled to run at {}", this.getClass().getSimpleName(), FORMATTER.format(nextRun));
+
+        return true;
+    }
+
+    @Override
+    public void postRun() throws Exception {
+        super.postRun();
+        loadConfiguration();
     }
 }

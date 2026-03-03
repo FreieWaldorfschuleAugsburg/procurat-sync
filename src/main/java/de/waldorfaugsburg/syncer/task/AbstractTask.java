@@ -8,22 +8,27 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Set;
 
 @Slf4j
-public abstract class AbstractTask<C> {
+public abstract class AbstractTask {
 
     private final SyncerApplication application;
-    private final Set<Class<? extends AbstractModule>> modules;
     private final String configurationPath;
-    private final Class<C> configurationClass;
+    private final Class<?> configurationClass;
+
+    private final Set<Class<? extends AbstractModule>> modules;
 
     @Getter
-    private C configuration;
-
+    private Object configuration;
     private boolean running;
+
+    @SafeVarargs
+    public AbstractTask(final SyncerApplication application, final Class<? extends AbstractModule>... modules) {
+        this(application, null, null, modules);
+    }
 
     @SafeVarargs
     public AbstractTask(final SyncerApplication application,
                         final String configurationPath,
-                        final Class<C> configurationClass,
+                        final Class<?> configurationClass,
                         final Class<? extends AbstractModule>... modules) {
         this.application = application;
         this.configurationPath = configurationPath;
@@ -41,8 +46,13 @@ public abstract class AbstractTask<C> {
     public void postRun() throws Exception {
     }
 
-    public void loadConfiguration() throws Exception {
-        configuration = application.loadConfiguration(configurationPath, configurationClass);
+    public boolean loadConfiguration() throws Exception {
+        if (configurationPath != null && configurationClass != null) {
+            configuration = getApplication().loadConfiguration(configurationPath, configurationClass);
+            return true;
+        }
+
+        return false;
     }
 
     void invoke() {
