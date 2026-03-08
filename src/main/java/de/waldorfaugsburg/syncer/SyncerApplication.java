@@ -6,6 +6,7 @@ import com.google.gson.stream.JsonReader;
 import de.waldorfaugsburg.syncer.config.ApplicationConfiguration;
 import de.waldorfaugsburg.syncer.mail.ApplicationMailer;
 import de.waldorfaugsburg.syncer.module.ModuleRegistry;
+import de.waldorfaugsburg.syncer.module.ews.EWSModule;
 import de.waldorfaugsburg.syncer.task.TaskRegistry;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

@@ -1,12 +1,11 @@
 package de.waldorfaugsburg.syncer.task;
 
 import de.waldorfaugsburg.syncer.SyncerApplication;
-import de.waldorfaugsburg.syncer.module.ews.task.EWSAddressBookTask;
+import de.waldorfaugsburg.syncer.module.ews.task.addressbook.EWSAddressBookTask;
 import de.waldorfaugsburg.syncer.module.starface.task.StarfaceContactsTask;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 

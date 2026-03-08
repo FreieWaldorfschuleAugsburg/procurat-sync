@@ -12,7 +12,9 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ProcuratModule extends AbstractModule {
 
@@ -58,29 +60,20 @@ public class ProcuratModule extends AbstractModule {
 
     }
 
-    public boolean isPersonInactive(final List<ProcuratGroupMembership> memberships, final int personId) {
-        final LocalDateTime now = LocalDateTime.now();
-
-        for (final ProcuratGroupMembership membership : memberships) {
-            if (membership.getPersonId() == personId) {
-                final LocalDateTime entryDate = LocalDateTime.parse(membership.getEntryDate(), FORMATTER);
-                final LocalDateTime exitDate = membership.getExitDate() == null ? null : LocalDateTime.parse(membership.getExitDate(), FORMATTER);
-
-                // Check if membership is still active
-                if (now.isAfter(entryDate) && (exitDate == null || now.isBefore(exitDate))) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
     public ProcuratPerson getPersonById(final int personId) throws IOException {
         return personService.findById(personId).execute().body();
     }
 
     public List<ProcuratPerson> getAllPersons() throws IOException {
         return personService.findAll().execute().body();
+    }
+
+    public Map<Integer, ProcuratPerson> getAllPersonsMap() throws IOException {
+        final Map<Integer, ProcuratPerson> personMap = new HashMap<>();
+        for (final ProcuratPerson person : getAllPersons()) {
+            personMap.put(person.getId(), person);
+        }
+        return personMap;
     }
 
     public List<ProcuratPerson> getPersonsByFamilyId(final int familyId) throws IOException {
@@ -93,6 +86,14 @@ public class ProcuratModule extends AbstractModule {
 
     public List<ProcuratGroupMembership> getRootGroupMemberships() throws IOException {
         return getGroupMemberships(config.getRootGroupId());
+    }
+
+    public Map<Integer, ProcuratGroupMembership> getRootGroupMembershipsMap() throws IOException {
+        final Map<Integer, ProcuratGroupMembership> membershipMap = new HashMap<>();
+        for (final ProcuratGroupMembership membership : getRootGroupMemberships()) {
+            membershipMap.put(membership.getPersonId(), membership);
+        }
+        return membershipMap;
     }
 
     public List<ProcuratContactInformation> getContactInformationByPersonId(final int personId) throws IOException {

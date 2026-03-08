@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class StarfaceContactsTask extends AbstractScheduledTask {
@@ -28,53 +29,55 @@ public class StarfaceContactsTask extends AbstractScheduledTask {
         int deletedCount = starfaceModule.deleteAllContacts();
         log.info("Deleted {} contacts", deletedCount);
 
-        final List<ProcuratPerson> persons = procuratModule.getAllPersons();
-        final List<ProcuratGroupMembership> rootMemberships = procuratModule.getRootGroupMemberships();
+        final Map<Integer, ProcuratPerson> personMap = procuratModule.getAllPersonsMap();
+        final List<ProcuratGroupMembership> rootGroupMemberships = procuratModule.getRootGroupMemberships();
 
         int count = 0;
-        for (final ProcuratPerson person : persons) {
-            if (procuratModule.isPersonInactive(rootMemberships, person.getId())) {
-                log.debug("Skipping inactive person (id: {})", person.getId());
-                continue;
+        for (final ProcuratGroupMembership membership : rootGroupMemberships) {
+            try {
+                final ProcuratPerson person = personMap.get(membership.getPersonId());
+
+                final List<ProcuratContactInformation> addressContactInfo = procuratModule.getContactInformationByAddressId(person.getAddressId());
+                final List<ProcuratContactInformation> personContactInfo = procuratModule.getContactInformationByPersonId(person.getId());
+
+                String homePhone = null;
+                for (final ProcuratContactInformation addressInfo : addressContactInfo) {
+                    // Only accept landline numbers
+                    if (!addressInfo.getMedium().equals("telephone")) continue;
+
+                    homePhone = normalizePhoneNumber(addressInfo.getContent());
+                    break;
+                }
+
+                final List<String> phoneNumbers = new ArrayList<>();
+                for (final ProcuratContactInformation personInfo : personContactInfo) {
+                    if (!personInfo.getMedium().equals("telephone") && !personInfo.getMedium().equals("mobile"))
+                        continue;
+                    // Skip phone numbers flagged as secret
+                    if (personInfo.isSecret()) continue;
+
+                    phoneNumbers.add(normalizePhoneNumber(personInfo.getContent()));
+                }
+
+                // Skip person without any personal phone numbers (e.g. students)
+                if (phoneNumbers.isEmpty()) {
+                    log.debug("Skipping person without phone numbers (id: {})", person.getId());
+                    continue;
+                }
+
+                // Remove possible duplicate home phone number
+                phoneNumbers.remove(homePhone);
+
+                log.debug("Create contact (id: {}, name: {}, homePhone: {}, numbers: {})", person.getId(), person.getFullName(), homePhone, String.join(";", phoneNumbers));
+                starfaceModule.createContact(person.getFirstName(), person.getLastName(), homePhone, phoneNumbers);
+
+                count++;
+            } catch (final Exception e) {
+                log.error("Error creating contact (id: {})", membership.getPersonId());
             }
-
-            final List<ProcuratContactInformation> addressContactInfo = procuratModule.getContactInformationByAddressId(person.getAddressId());
-            final List<ProcuratContactInformation> personContactInfo = procuratModule.getContactInformationByPersonId(person.getId());
-
-            String homePhone = null;
-            for (final ProcuratContactInformation addressInfo : addressContactInfo) {
-                // Only accept landline numbers
-                if (!addressInfo.getMedium().equals("telephone")) continue;
-
-                homePhone = normalizePhoneNumber(addressInfo.getContent());
-                break;
-            }
-
-            final List<String> phoneNumbers = new ArrayList<>();
-            for (final ProcuratContactInformation personInfo : personContactInfo) {
-                if (!personInfo.getMedium().equals("telephone") && !personInfo.getMedium().equals("mobile")) continue;
-                // Skip phone numbers flagged as secret
-                if (personInfo.isSecret()) continue;
-
-                phoneNumbers.add(normalizePhoneNumber(personInfo.getContent()));
-            }
-
-            // Skip person without any personal phone numbers (e.g. students)
-            if (phoneNumbers.isEmpty()) {
-                log.debug("Skipping person without phone numbers (id: {})", person.getId());
-                continue;
-            }
-
-            // Remove possible duplicate home phone number
-            phoneNumbers.remove(homePhone);
-
-            log.debug("Create contact (id: {}, name: {}, homePhone: {}, numbers: {})", person.getId(), person.getFullName(), homePhone, String.join(";", phoneNumbers));
-            starfaceModule.createContact(person.getFirstName(), person.getLastName(), homePhone, phoneNumbers);
-
-            count++;
         }
 
-        log.info("Created {} contacts from {} persons", count, persons.size());
+        log.info("Created {} contacts from {} persons", count, rootGroupMemberships.size());
     }
 
     private String normalizePhoneNumber(final String phoneNumber) {
