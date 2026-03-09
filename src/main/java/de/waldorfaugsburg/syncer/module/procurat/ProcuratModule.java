@@ -10,8 +10,6 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +17,8 @@ import java.util.Map;
 public class ProcuratModule extends AbstractModule {
 
     private static final Duration TIMEOUT_DURATION = Duration.ofMinutes(5);
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX");
 
     private ProcuratConfig config;
-
     private ProcuratPersonService personService;
     private ProcuratGroupService groupService;
     private ProcuratContactInformationService contactInformationService;
@@ -57,7 +53,6 @@ public class ProcuratModule extends AbstractModule {
 
     @Override
     public void destroy() throws Exception {
-
     }
 
     public ProcuratPerson getPersonById(final int personId) throws IOException {

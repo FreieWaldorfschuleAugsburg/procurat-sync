@@ -70,7 +70,6 @@ public class StarfaceModule extends AbstractModule {
 
     @Override
     public void destroy() throws Exception {
-
     }
 
     public void createContact(final String firstName, final String lastName, final String homePhoneNumber,

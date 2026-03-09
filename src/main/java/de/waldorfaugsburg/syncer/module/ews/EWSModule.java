@@ -16,6 +16,8 @@ import microsoft.exchange.webservices.data.core.service.folder.Folder;
 import microsoft.exchange.webservices.data.core.service.item.Contact;
 import microsoft.exchange.webservices.data.core.service.item.ContactGroup;
 import microsoft.exchange.webservices.data.core.service.item.Item;
+import microsoft.exchange.webservices.data.core.service.schema.ContactGroupSchema;
+import microsoft.exchange.webservices.data.core.service.schema.ContactSchema;
 import microsoft.exchange.webservices.data.core.service.schema.FolderSchema;
 import microsoft.exchange.webservices.data.core.service.schema.ItemSchema;
 import microsoft.exchange.webservices.data.misc.ImpersonatedUserId;
@@ -53,7 +55,6 @@ public class EWSModule extends AbstractModule {
         }
     }
 
-    private EWSConfig config;
     private ExchangeService service;
     private Folder contactFolder;
 
@@ -63,7 +64,7 @@ public class EWSModule extends AbstractModule {
 
     @Override
     public void init() throws Exception {
-        config = getApplication().loadConfiguration("ews.json", EWSConfig.class);
+        final EWSConfig config = getApplication().loadConfiguration("ews.json", EWSConfig.class);
 
         final IClientCredential credential = ClientCredentialFactory.createFromSecret(config.getClientSecret());
         final ConfidentialClientApplication confidentialClientApplication = ConfidentialClientApplication.builder(config.getClientId(), credential).authority(String.format(EWS_AUTHORITY, config.getTenantId())).build();
@@ -160,6 +161,7 @@ public class EWSModule extends AbstractModule {
 
         group.setDisplayName(model.getDisplayName());
 
+        // Clear existing groups only
         if (!newGroup) {
             for (final GroupMember item : Set.copyOf(group.getMembers().getItems())) {
                 group.getMembers().remove(item);
@@ -167,6 +169,7 @@ public class EWSModule extends AbstractModule {
             group.update(ConflictResolutionMode.AlwaysOverwrite);
         }
 
+        // Add members
         for (final Map.Entry<String, String> entry : model.getAddresses().entries()) {
             group.getMembers().addOneOff(entry.getKey(), entry.getValue());
         }
@@ -189,7 +192,8 @@ public class EWSModule extends AbstractModule {
         final FindItemsResults<Item> results = contactFolder.findItems(new SearchFilter.IsEqualTo(CONTACT_ID_PROPERTY, id), new ItemView(1));
         if (results.getTotalCount() > 0) {
             final Contact contact = (Contact) results.getItems().getFirst();
-            contact.load();
+            // Load basic parameters
+            contact.load(new PropertySet(BasePropertySet.IdOnly, CONTACT_ID_PROPERTY, ContactSchema.GivenName, ContactSchema.Surname, ContactSchema.DisplayName, ContactSchema.EmailAddresses, ItemSchema.Body));
             return contact;
         }
 
@@ -204,7 +208,8 @@ public class EWSModule extends AbstractModule {
         final FindItemsResults<Item> results = contactFolder.findItems(new SearchFilter.IsEqualTo(GROUP_ID_PROPERTY, id), new ItemView(1));
         if (results.getTotalCount() > 0) {
             final ContactGroup contactGroup = (ContactGroup) results.getItems().getFirst();
-            contactGroup.load();
+            // Load basic parameters
+            contactGroup.load(new PropertySet(BasePropertySet.IdOnly, GROUP_ID_PROPERTY, ContactSchema.DisplayName, ContactGroupSchema.Members));
             return contactGroup;
         }
 
@@ -214,9 +219,11 @@ public class EWSModule extends AbstractModule {
     public int readId(final Item item) throws Exception {
         final OutParam<Integer> outParam = new OutParam<>();
         if (item instanceof Contact contact) {
+            // Explicitly load extended property
             contact.load(new PropertySet(CONTACT_ID_PROPERTY));
             contact.getExtendedProperties().tryGetValue(Integer.class, CONTACT_ID_PROPERTY, outParam);
         } else if (item instanceof ContactGroup contactGroup) {
+            // Explicitly load extended property
             contactGroup.load(new PropertySet(GROUP_ID_PROPERTY));
             contactGroup.getExtendedProperties().tryGetValue(Integer.class, GROUP_ID_PROPERTY, outParam);
         }
@@ -225,6 +232,7 @@ public class EWSModule extends AbstractModule {
     }
 
     public <T extends Item> List<T> findAllItems(final Class<T> itemClass) throws Exception {
+        // Reduces loading time by only loading id and totalCount
         contactFolder.load(new PropertySet(BasePropertySet.IdOnly, FolderSchema.TotalCount));
 
         final int totalCount = contactFolder.getTotalCount();
