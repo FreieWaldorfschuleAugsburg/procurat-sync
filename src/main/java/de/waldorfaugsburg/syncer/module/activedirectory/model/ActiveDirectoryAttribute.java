@@ -7,10 +7,11 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ActiveDirectoryAttribute {
 
-    DN("dn", true),
+    DN("distinguishedName", true),
     CN("cn", true),
     GIVEN_NAME("givenName", true),
     SN("sn", true),
+    DISPLAY_NAME("displayName", true),
     MAIL("mail", false),
     SAM_ACCOUNT_NAME("sAMAccountName", true),
     USER_PRINCIPAL_NAME("userPrincipalName", true),

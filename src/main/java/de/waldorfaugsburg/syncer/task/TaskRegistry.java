@@ -1,6 +1,7 @@
 package de.waldorfaugsburg.syncer.task;
 
 import de.waldorfaugsburg.syncer.SyncerApplication;
+import de.waldorfaugsburg.syncer.module.activedirectory.task.ActiveDirectoryTask;
 import de.waldorfaugsburg.syncer.module.ews.task.addressbook.EWSAddressBookTask;
 import de.waldorfaugsburg.syncer.module.starface.task.StarfaceContactsTask;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class TaskRegistry {
     private void registerTasks() {
         tasks.add(new StarfaceContactsTask(application));
         tasks.add(new EWSAddressBookTask(application));
+        tasks.add(new ActiveDirectoryTask(application));
     }
 
     private void loadConfigurations() {

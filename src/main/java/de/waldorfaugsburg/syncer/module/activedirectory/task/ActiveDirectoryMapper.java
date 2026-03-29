@@ -13,6 +13,7 @@ import java.util.Set;
 public class ActiveDirectoryMapper extends ScheduledTaskConfiguration {
 
     private String name;
+    private int priority;
     private Set<Integer> groups;
     private Set<Integer> correspondenceGroups;
     private Set<Integer> persons;

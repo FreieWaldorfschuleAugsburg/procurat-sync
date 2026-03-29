@@ -4,6 +4,7 @@ import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.AbstractModule;
 import de.waldorfaugsburg.syncer.module.activedirectory.model.ActiveDirectoryAttribute;
 import de.waldorfaugsburg.syncer.module.activedirectory.model.ActiveDirectoryUser;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
@@ -12,13 +13,13 @@ import javax.naming.directory.*;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.List;
+import java.text.Normalizer;
+import java.util.*;
 
+@Slf4j
 public class ActiveDirectoryModule extends AbstractModule {
 
+    private ActiveDirectoryConfig config;
     private LdapContext ldapContext;
 
     public ActiveDirectoryModule(final SyncerApplication application) {
@@ -27,7 +28,7 @@ public class ActiveDirectoryModule extends AbstractModule {
 
     @Override
     public void init() throws Exception {
-        final ActiveDirectoryConfig config = getApplication().loadConfiguration("ad.json", ActiveDirectoryConfig.class);
+        config = getApplication().loadConfiguration("ad.json", ActiveDirectoryConfig.class);
 
         final Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
@@ -43,7 +44,27 @@ public class ActiveDirectoryModule extends AbstractModule {
 
     @Override
     public void destroy() throws Exception {
+        ldapContext.close();
+    }
 
+    public String generateUsername(final String firstName, final String lastName) throws NamingException {
+        int i = 1;
+        String username = null;
+
+        while (username == null || findUserByUsername(username) != null) {
+            username = config.getUsernamePrefix() + i + normalizeInput(firstName.substring(0, 2)) + normalizeInput(lastName.substring(0, 2));
+            i++;
+        }
+
+        return username;
+    }
+
+    public String normalizeInput(final String input) {
+        return Normalizer.normalize(input, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "").replaceAll(" ", "-").toLowerCase();
+    }
+
+    public ActiveDirectoryUPNStrategy getUpnStrategy(final String strategyName) {
+        return config.getUpnStrategies().get(strategyName);
     }
 
     public void addToGroup(final ActiveDirectoryUser user, final String groupDN) throws NamingException {
@@ -51,27 +72,48 @@ public class ActiveDirectoryModule extends AbstractModule {
         ldapContext.modifyAttributes(groupDN, new ModificationItem[]{item});
     }
 
-    public void isGroupMember(final ActiveDirectoryUser user, final String groupDN) throws NamingException {
+    public boolean isGroupMember(final ActiveDirectoryUser user, final String groupDN) throws NamingException {
+        final SearchControls searchControls = new SearchControls();
+        searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        searchControls.setReturningAttributes(new String[]{"member"});
 
+        final NamingEnumeration<SearchResult> results = ldapContext.search(groupDN, "(objectClass=*)", searchControls);
+        if (results.hasMoreElements()) {
+            final SearchResult result = results.next();
+            final Attribute attribute = result.getAttributes().get("member");
+            if (attribute != null) {
+                final NamingEnumeration<?> members = attribute.getAll();
+
+                while (members.hasMore()) {
+                    final String memberDN = (String) members.next();
+                    if (user.getAttribute(ActiveDirectoryAttribute.DN).equals(memberDN)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     public void createUser(final String baseDN, final ActiveDirectoryUser user) throws NamingException {
-        final String fullName = user.getAttribute(ActiveDirectoryAttribute.GIVEN_NAME) + " " + user.getAttribute(ActiveDirectoryAttribute.SN);
-        final String dn = "cn=" + fullName + "," + baseDN;
-
+        final String dn = "cn=" + user.getAttribute(ActiveDirectoryAttribute.CN) + "," + baseDN;
         user.setAttribute(ActiveDirectoryAttribute.DN, dn);
-        ldapContext.createSubcontext(dn, user.attributes());
+
+        //ldapContext.createSubcontext(dn, user.attributes());
+        log.info("Created user (dn: {}, sAMAccountName: {})", user.getAttribute(ActiveDirectoryAttribute.DN),
+                user.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME));
     }
 
-    public void updateUser(final String baseDN, final ActiveDirectoryUser updatedUser) throws NamingException {
-        final ActiveDirectoryUser currentUser = findUserByUsername(baseDN, updatedUser.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME));
+    public void updateUser(final ActiveDirectoryUser updatedUser) throws NamingException {
+        final ActiveDirectoryUser currentUser = findUserByUsername(updatedUser.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME));
 
         final List<ModificationItem> modifications = new ArrayList<>();
         for (final ActiveDirectoryAttribute attribute : ActiveDirectoryAttribute.values()) {
             final Object currentValue = currentUser.getAttribute(attribute);
             final Object updatedValue = updatedUser.getAttribute(attribute);
 
-            if (currentValue.equals(updatedValue)) {
+            if (updatedValue == null || (currentValue != null && currentValue.equals(updatedValue))) {
                 continue;
             }
 
@@ -86,17 +128,19 @@ public class ActiveDirectoryModule extends AbstractModule {
             return;
         }
 
-        ldapContext.modifyAttributes((String) currentUser.getAttribute(ActiveDirectoryAttribute.DN), modifications.toArray(new ModificationItem[0]));
+        //ldapContext.modifyAttributes((String) currentUser.getAttribute(ActiveDirectoryAttribute.DN), modifications.toArray(new ModificationItem[0]));
+        log.info("Updated user (dn: {}, sAMAccountName: {}, modifications: {})", updatedUser.getAttribute(ActiveDirectoryAttribute.DN),
+                updatedUser.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME), modifications.size());
     }
 
-    public ActiveDirectoryUser findUserByEmployeeId(final String baseDN, final int employeeId) throws NamingException {
+    public ActiveDirectoryUser findUserByEmployeeId(final int employeeId) throws NamingException {
         final String searchFilter = "(&(objectClass=person)(employeeID=" + employeeId + "))";
-        return findUserByFilter(baseDN, searchFilter);
+        return findUserByFilter(config.getUsersDN(), searchFilter);
     }
 
-    public ActiveDirectoryUser findUserByUsername(final String baseDN, final String username) throws NamingException {
+    public ActiveDirectoryUser findUserByUsername(final String username) throws NamingException {
         final String searchFilter = "(&(objectClass=person)(sAMAccountName=" + username + "))";
-        return findUserByFilter(baseDN, searchFilter);
+        return findUserByFilter(config.getUsersDN(), searchFilter);
     }
 
     public ActiveDirectoryUser findUserByFilter(final String baseDN, final String filter) throws NamingException {
