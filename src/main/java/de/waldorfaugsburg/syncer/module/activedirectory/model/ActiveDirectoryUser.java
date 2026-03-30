@@ -12,7 +12,7 @@ public record ActiveDirectoryUser(Attributes attributes) {
 
     public ActiveDirectoryUser() {
         this(new BasicAttributes());
-        
+
         final Attribute objectClassAttribute = new BasicAttribute("objectClass");
         objectClassAttribute.add("person");
         objectClassAttribute.add("organizationalPerson");
@@ -40,19 +40,19 @@ public record ActiveDirectoryUser(Attributes attributes) {
 
     public void setDisabled(final boolean disabled) throws NamingException {
         // ACCOUNTDISABLE = 0x0002
-        BigInteger userAccountControl = getAttribute(ActiveDirectoryAttribute.USER_ACCOUNT_CONTROL);
+        BigInteger userAccountControl = new BigInteger((String) getAttribute(ActiveDirectoryAttribute.USER_ACCOUNT_CONTROL));
         if (disabled) {
             userAccountControl = userAccountControl.setBit(1);
         } else {
             userAccountControl = userAccountControl.clearBit(1);
         }
 
-        attributes.put(ActiveDirectoryAttribute.USER_ACCOUNT_CONTROL.getLdapAttributeName(), String.valueOf(userAccountControl));
+        attributes.put(ActiveDirectoryAttribute.USER_ACCOUNT_CONTROL.getLdapAttributeName(), userAccountControl.toString());
     }
 
     public boolean isDisabled() throws NamingException {
         // ACCOUNTDISABLE = 0x0002
-        final BigInteger userAccountControl = getAttribute(ActiveDirectoryAttribute.USER_ACCOUNT_CONTROL);
+        final BigInteger userAccountControl = new BigInteger((String) getAttribute(ActiveDirectoryAttribute.USER_ACCOUNT_CONTROL));
         return userAccountControl.testBit(1);
     }
 

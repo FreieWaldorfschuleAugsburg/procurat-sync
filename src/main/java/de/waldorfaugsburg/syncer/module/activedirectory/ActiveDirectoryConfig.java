@@ -15,6 +15,7 @@ public class ActiveDirectoryConfig {
     private String password;
     private String usersDN;
     private String usernamePrefix;
+    private String usernameUDF;
     private Map<String, ActiveDirectoryUPNStrategy> upnStrategies;
 
 }

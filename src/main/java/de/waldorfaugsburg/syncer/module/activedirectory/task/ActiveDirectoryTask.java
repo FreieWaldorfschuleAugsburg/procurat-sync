@@ -21,6 +21,8 @@ import java.util.*;
 @Slf4j
 public class ActiveDirectoryTask extends AbstractScheduledTask {
 
+    private final HashMultimap<String, String> groupMemberMultimap = HashMultimap.create();
+
     private ProcuratModule procuratModule;
     private ActiveDirectoryModule activeDirectoryModule;
 
@@ -36,6 +38,8 @@ public class ActiveDirectoryTask extends AbstractScheduledTask {
         final TreeMultimap<Integer, ActiveDirectoryMapper> personMapperMultimap = TreeMultimap.create(Ordering.natural(),
                 Comparator.comparingInt(ActiveDirectoryMapper::getPriority));
 
+        log.info("Preparing mappers");
+
         final ActiveDirectoryTaskConfiguration taskConfiguration = (ActiveDirectoryTaskConfiguration) getConfiguration();
         for (final ActiveDirectoryMapper mapper : taskConfiguration.getMappers()) {
             try {
@@ -43,16 +47,21 @@ public class ActiveDirectoryTask extends AbstractScheduledTask {
                 for (final Integer personId : personIds) {
                     personMapperMultimap.put(personId, mapper);
                 }
+
+                log.info("Prepared mapper (name: {}, persons: {})", mapper.getName(), personIds.size());
             } catch (final Exception e) {
                 log.error("Error while loading mapper (name: {})", mapper.getName(), e);
             }
         }
+
+        log.info("Executing mappers");
 
         for (final Integer personId : personMapperMultimap.keySet()) {
             boolean primary = true;
 
             for (final ActiveDirectoryMapper mapper : personMapperMultimap.get(personId)) {
                 try {
+                    log.debug("Execute mapper (personId: {}, mapper: {})", personId, mapper.getName());
                     executeMapper(personId, mapper, primary);
                 } catch (final Exception e) {
                     log.error("Error while handling person (mapper: {}, personId: {})", mapper.getName(), personId, e);
@@ -62,8 +71,46 @@ public class ActiveDirectoryTask extends AbstractScheduledTask {
             }
         }
 
+        log.info("Update group members");
+
+        for (final String groupDN : groupMemberMultimap.keySet()) {
+            final Set<String> desiredMembers = groupMemberMultimap.get(groupDN);
+            final Set<String> actualMembers = activeDirectoryModule.getGroupMembers(groupDN);
+
+            for (final String userDN : actualMembers) {
+                if (!desiredMembers.contains(userDN)) {
+                    activeDirectoryModule.removeGroupMember(groupDN, userDN);
+                }
+            }
+
+            for (final String userDN : desiredMembers) {
+                if (!actualMembers.contains(userDN)) {
+                    activeDirectoryModule.addGroupMember(groupDN, userDN);
+                }
+            }
+        }
+
         // Clear map for next run
-        personMapperMultimap.clear();
+        groupMemberMultimap.clear();
+
+        log.info("Disable inactive users");
+
+        final Map<Integer, ProcuratGroupMembership> rootGroupMembershipsMap = procuratModule.getRootGroupMembershipsMap();
+        for (final ActiveDirectoryUser user : activeDirectoryModule.findAllUsers()) {
+            if (user.isDisabled()) {
+                continue;
+            }
+
+            final String personId = user.getAttribute(ActiveDirectoryAttribute.EMPLOYEE_ID);
+            if (personId == null) {
+                continue;
+            }
+
+            if (!rootGroupMembershipsMap.containsKey(Integer.parseInt(personId))) {
+                user.setDisabled(true);
+                log.info("Disabled inactive user (personId: {})", personId);
+            }
+        }
     }
 
     private Set<Integer> findMapperPersons(final ActiveDirectoryMapper mapper) throws IOException {
@@ -101,13 +148,15 @@ public class ActiveDirectoryTask extends AbstractScheduledTask {
             newUser = true;
         }
 
+        // Update static values so execution exists if user was e.g. renamed
         user.setAttribute(ActiveDirectoryAttribute.CN, person.getFullName());
         user.setAttribute(ActiveDirectoryAttribute.DISPLAY_NAME, person.getFullName());
         user.setAttribute(ActiveDirectoryAttribute.GIVEN_NAME, person.getFirstName());
         user.setAttribute(ActiveDirectoryAttribute.SN, person.getLastName());
 
+        // If is primary mapper
         final String distinguishedName = user.getAttribute(ActiveDirectoryAttribute.DN);
-        if (primary && distinguishedName != null && distinguishedName.contains(mapper.getTargetDN())) {
+        if (primary && distinguishedName == null || primary && distinguishedName.contains(mapper.getTargetDN())) {
             user.setAttribute(ActiveDirectoryAttribute.TITLE, mapper.getTitle());
             user.setAttribute(ActiveDirectoryAttribute.PHYSICAL_DELIVERY_OFFICE_NAME, mapper.getOffice());
             user.setAttribute(ActiveDirectoryAttribute.DESCRIPTION, mapper.getDescription());
@@ -134,15 +183,13 @@ public class ActiveDirectoryTask extends AbstractScheduledTask {
 
         if (newUser) {
             activeDirectoryModule.createUser(mapper.getTargetDN(), user);
-            return;
+            procuratModule.updateRootGroupUDF(personId, activeDirectoryModule.getConfig().getUsernameUDF(), user.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME));
+        } else {
+            activeDirectoryModule.updateUser(user);
         }
 
-        activeDirectoryModule.updateUser(user);
-
         for (final String targetGroupDN : mapper.getTargetGroups()) {
-            if (!activeDirectoryModule.isGroupMember(user, targetGroupDN)) {
-                activeDirectoryModule.addToGroup(user, targetGroupDN);
-            }
+            groupMemberMultimap.put(targetGroupDN, user.getAttribute(ActiveDirectoryAttribute.DN));
         }
     }
 

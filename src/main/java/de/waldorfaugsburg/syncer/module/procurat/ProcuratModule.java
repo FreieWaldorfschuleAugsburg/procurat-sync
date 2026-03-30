@@ -1,5 +1,6 @@
 package de.waldorfaugsburg.syncer.module.procurat;
 
+import com.google.gson.Gson;
 import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.AbstractModule;
 import de.waldorfaugsburg.syncer.module.procurat.model.*;
@@ -77,6 +78,13 @@ public class ProcuratModule extends AbstractModule {
 
     public List<ProcuratGroupMembership> getGroupMemberships(final int groupId) throws IOException {
         return groupService.findMembers(groupId).execute().body();
+    }
+
+    public void updateRootGroupUDF(final int personId, final String udfName, final String udfValue) throws IOException {
+        final ProcuratGroupMembership membership = getRootGroupMembershipsMap().get(personId);
+        membership.getJsonData().addProperty(udfName, udfValue);
+
+        groupService.updateMembership(config.getRootGroupId(), personId, membership).execute();
     }
 
     public List<ProcuratGroupMembership> getRootGroupMemberships() throws IOException {
