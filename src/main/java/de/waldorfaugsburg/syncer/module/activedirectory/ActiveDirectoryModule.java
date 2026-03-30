@@ -49,27 +49,12 @@ public class ActiveDirectoryModule extends AbstractModule {
         ldapContext.close();
     }
 
-    public String generateUsername(final String firstName, final String lastName) throws NamingException {
-        int i = 1;
-        String username = null;
-
-        while (username == null || findUserByUsername(username) != null) {
-            username = config.getUsernamePrefix() + i + normalizeInput(firstName.substring(0, 2)) + normalizeInput(lastName.substring(0, 2));
-            i++;
+    public void addGroupMember(final String groupDN, final String userDN) throws NamingException {
+        if (getApplication().getConfiguration().isPretendMode()) {
+            log.info("PRETEND: Add group member (groupDN: {}, userDN: {})", groupDN, userDN);
+            return;
         }
 
-        return username;
-    }
-
-    public String normalizeInput(final String input) {
-        return Normalizer.normalize(input, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "").replaceAll(" ", "-").toLowerCase();
-    }
-
-    public ActiveDirectoryUPNStrategy getUpnStrategy(final String strategyName) {
-        return config.getUpnStrategies().get(strategyName);
-    }
-
-    public void addGroupMember(final String groupDN, final String userDN) throws NamingException {
         final ModificationItem item = new ModificationItem(DirContext.ADD_ATTRIBUTE, new BasicAttribute("member", userDN));
 
         log.info("Add group member (groupDN: {}, userDN: {})", groupDN, userDN);
@@ -77,44 +62,30 @@ public class ActiveDirectoryModule extends AbstractModule {
     }
 
     public void removeGroupMember(final String groupDN, final String userDN) throws NamingException {
+        if (getApplication().getConfiguration().isPretendMode()) {
+            log.info("PRETEND: Remove group member (groupDN: {}, userDN: {})", groupDN, userDN);
+            return;
+        }
+
         final ModificationItem item = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, new BasicAttribute("member", userDN));
 
         log.info("Remove group member (groupDN: {}, userDN: {})", groupDN, userDN);
         ldapContext.modifyAttributes(groupDN, new ModificationItem[]{item});
     }
 
-    public Set<String> getGroupMembers(final String groupDN) throws NamingException {
-        final Set<String> users = new HashSet<>();
-
-        final SearchControls searchControls = new SearchControls();
-        searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        searchControls.setReturningAttributes(new String[]{"member"});
-
-        final NamingEnumeration<SearchResult> results = ldapContext.search(groupDN, "(objectClass=*)", searchControls);
-        if (results.hasMoreElements()) {
-            final SearchResult result = results.next();
-            final Attribute attribute = result.getAttributes().get("member");
-            if (attribute != null) {
-                final NamingEnumeration<?> members = attribute.getAll();
-
-                while (members.hasMore()) {
-                    final String memberDN = (String) members.next();
-                    users.add(memberDN);
-                }
-            }
-        }
-
-        return users;
-    }
-
     public void createUser(final String baseDN, final ActiveDirectoryUser user) throws NamingException {
         final String dn = "cn=" + user.getAttribute(ActiveDirectoryAttribute.CN) + "," + baseDN;
         user.setAttribute(ActiveDirectoryAttribute.DN, dn);
 
-        log.info("blob");
-        ldapContext.createSubcontext(dn, user.attributes());
-        log.info("Created user (dn: {}, sAMAccountName: {})", user.getAttribute(ActiveDirectoryAttribute.DN),
+        if (getApplication().getConfiguration().isPretendMode()) {
+            log.info("PRETEND: Create user (dn: {}, sAMAccountName: {})", user.getAttribute(ActiveDirectoryAttribute.DN),
+                    user.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME));
+            return;
+        }
+
+        log.info("Create user (dn: {}, sAMAccountName: {})", user.getAttribute(ActiveDirectoryAttribute.DN),
                 user.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME));
+        ldapContext.createSubcontext(dn, user.attributes());
     }
 
     public void updateUser(final ActiveDirectoryUser updatedUser) throws NamingException {
@@ -140,10 +111,59 @@ public class ActiveDirectoryModule extends AbstractModule {
             return;
         }
 
-        log.info("blob");
+        if (getApplication().getConfiguration().isPretendMode()) {
+            log.info("PRETEND: Updated user (dn: {}, sAMAccountName: {}, modifications: {})", updatedUser.getAttribute(ActiveDirectoryAttribute.DN),
+                    updatedUser.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME), modifications.size());
+            return;
+        }
+
         ldapContext.modifyAttributes((String) currentUser.getAttribute(ActiveDirectoryAttribute.DN), modifications.toArray(new ModificationItem[0]));
         log.info("Updated user (dn: {}, sAMAccountName: {}, modifications: {})", updatedUser.getAttribute(ActiveDirectoryAttribute.DN),
                 updatedUser.getAttribute(ActiveDirectoryAttribute.SAM_ACCOUNT_NAME), modifications.size());
+    }
+
+    public String generateUsername(final String firstName, final String lastName) throws NamingException {
+        int i = 1;
+        String username = null;
+
+        while (username == null || findUserByUsername(username) != null) {
+            username = config.getUsernamePrefix() + i + normalizeInput(firstName.substring(0, 2)) + normalizeInput(lastName.substring(0, 2));
+            i++;
+        }
+
+        return username;
+    }
+
+    public String normalizeInput(final String input) {
+        return Normalizer.normalize(input, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "").replaceAll(" ", "-").toLowerCase();
+    }
+
+    public ActiveDirectoryUPNStrategy getUpnStrategy(final String strategyName) {
+        return config.getUpnStrategies().get(strategyName);
+    }
+
+    public Set<String> getGroupMembers(final String groupDN) throws NamingException {
+        final Set<String> users = new HashSet<>();
+
+        final SearchControls searchControls = new SearchControls();
+        searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        searchControls.setReturningAttributes(new String[]{"member"});
+
+        final NamingEnumeration<SearchResult> results = ldapContext.search(groupDN, "(objectClass=*)", searchControls);
+        if (results.hasMoreElements()) {
+            final SearchResult result = results.next();
+            final Attribute attribute = result.getAttributes().get("member");
+            if (attribute != null) {
+                final NamingEnumeration<?> members = attribute.getAll();
+
+                while (members.hasMore()) {
+                    final String memberDN = (String) members.next();
+                    users.add(memberDN);
+                }
+            }
+        }
+
+        return users;
     }
 
     public ActiveDirectoryUser findUserByEmployeeId(final int employeeId) throws NamingException {

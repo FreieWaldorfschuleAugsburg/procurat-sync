@@ -1,10 +1,10 @@
 package de.waldorfaugsburg.syncer.module.procurat;
 
-import com.google.gson.Gson;
 import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.AbstractModule;
 import de.waldorfaugsburg.syncer.module.procurat.model.*;
 import de.waldorfaugsburg.syncer.module.procurat.service.*;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class ProcuratModule extends AbstractModule {
 
     private static final Duration TIMEOUT_DURATION = Duration.ofMinutes(5);
@@ -81,9 +82,15 @@ public class ProcuratModule extends AbstractModule {
     }
 
     public void updateRootGroupUDF(final int personId, final String udfName, final String udfValue) throws IOException {
+        if (getApplication().getConfiguration().isPretendMode()) {
+            log.info("PRETEND: Update root UDF (personId: {}, udfName: {}, udfValue: {})", personId, udfName, udfValue);
+            return;
+        }
+
         final ProcuratGroupMembership membership = getRootGroupMembershipsMap().get(personId);
         membership.getJsonData().addProperty(udfName, udfValue);
 
+        log.info("Update root UDF (personId: {}, udfName: {}, udfValue: {})", personId, udfName, udfValue);
         groupService.updateMembership(config.getRootGroupId(), personId, membership).execute();
     }
 

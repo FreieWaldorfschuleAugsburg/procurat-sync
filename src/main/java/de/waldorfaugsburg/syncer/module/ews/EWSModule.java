@@ -142,9 +142,19 @@ public class EWSModule extends AbstractModule {
         }
 
         if (newContact) {
+            if (getApplication().getConfiguration().isPretendMode()) {
+                log.info("PRETEND: Create new contact (id: {}, name: {})", model.getId(), contact.getDisplayName());
+                return;
+            }
+
             contact.save(contactFolder.getId());
             log.info("Created new contact (id: {}, name: {})", model.getId(), contact.getDisplayName());
         } else if (changes) {
+            if (getApplication().getConfiguration().isPretendMode()) {
+                log.info("PRETEND: Update contact (id: {}, name: {})", model.getId(), contact.getDisplayName());
+                return;
+            }
+
             contact.update(ConflictResolutionMode.AlwaysOverwrite);
             log.info("Updated contact (id: {}, name: {})", model.getId(), contact.getDisplayName());
         }
@@ -175,8 +185,18 @@ public class EWSModule extends AbstractModule {
         }
 
         if (newGroup) {
+            if (getApplication().getConfiguration().isPretendMode()) {
+                log.info("PRETEND: Created new contact group (id: {}, name: {}, members: {})", model.getId(), group.getDisplayName(), group.getMembers().getCount());
+                return;
+            }
+
             group.save(contactFolder.getId());
             log.info("Created new contact group (id: {}, name: {}, members: {})", model.getId(), group.getDisplayName(), group.getMembers().getCount());
+            return;
+        }
+
+        if (getApplication().getConfiguration().isPretendMode()) {
+            log.info("PRETEND: Updated contact group (id: {}, name: {}, members: {})", model.getId(), group.getDisplayName(), group.getMembers().getCount());
             return;
         }
 

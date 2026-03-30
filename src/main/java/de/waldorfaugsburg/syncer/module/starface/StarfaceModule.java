@@ -118,7 +118,12 @@ public class StarfaceModule extends AbstractModule {
         contact.setTags(tags);
         contact.setBlocks(blocks);
 
-        service.createContact(contact).execute();
+        if (getApplication().getConfiguration().isPretendMode()) {
+            log.info("PRETEND: Create contact (firstName: {}, lastName: {}, homePhoneNumber: {}, phoneNumbers: {})",
+                    firstName, lastName, homePhoneNumber, String.join(";", phoneNumbers));
+        } else {
+            service.createContact(contact).execute();
+        }
     }
 
     public int deleteAllContacts() throws IOException, StarfaceException {
@@ -139,7 +144,10 @@ public class StarfaceModule extends AbstractModule {
             }
 
             for (final StarfaceContactSearchResult.Contact contact : result.getContacts()) {
-                service.deleteContact(contact.getId()).execute();
+                if (!getApplication().getConfiguration().isPretendMode()) {
+                    service.deleteContact(contact.getId()).execute();
+                }
+
                 count++;
             }
         }

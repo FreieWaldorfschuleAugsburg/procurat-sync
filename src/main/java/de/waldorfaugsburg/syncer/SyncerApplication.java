@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 
 import java.io.FileReader;
+import java.util.Scanner;
 
 @Getter
 @Slf4j
@@ -29,7 +30,7 @@ public class SyncerApplication {
     private ModuleRegistry moduleRegistry;
     private TaskRegistry taskRegistry;
 
-    public void enable() throws Exception {
+    public void enable(final String[] args) throws Exception {
         Logger logger = LogManager.getRootLogger();
         Configurator.setAllLevels(logger.getName(), Level.getLevel("DEBUG"));
 
@@ -38,6 +39,14 @@ public class SyncerApplication {
 
         moduleRegistry = new ModuleRegistry(this);
         taskRegistry = new TaskRegistry(this);
+
+        if (configuration.isPretendMode()) {
+            log.warn("PRETEND MODE is active");
+        }
+
+        if (args.length == 1) {
+            taskRegistry.invokeTask(args[0]);
+        }
     }
 
     public void disable() throws Exception {
@@ -62,7 +71,7 @@ public class SyncerApplication {
 
         new Thread(() -> {
             try {
-                application.enable();
+                application.enable(args);
             } catch (final Exception e) {
                 log.error("An error occurred while enabling application", e);
                 System.exit(1);

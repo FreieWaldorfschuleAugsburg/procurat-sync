@@ -32,8 +32,8 @@ public class ActiveDirectoryTask extends AbstractScheduledTask {
 
     @Override
     public void run() throws Exception {
-        procuratModule = getApplication().getModuleRegistry().getOrCreateInstance(ProcuratModule.class);
-        activeDirectoryModule = getApplication().getModuleRegistry().getOrCreateInstance(ActiveDirectoryModule.class);
+        procuratModule = getApplication().getModuleRegistry().getInstance(ProcuratModule.class);
+        activeDirectoryModule = getApplication().getModuleRegistry().getInstance(ActiveDirectoryModule.class);
 
         final TreeMultimap<Integer, ActiveDirectoryMapper> personMapperMultimap = TreeMultimap.create(Ordering.natural(),
                 Comparator.comparingInt(ActiveDirectoryMapper::getPriority));

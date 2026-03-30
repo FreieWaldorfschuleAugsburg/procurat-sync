@@ -22,8 +22,8 @@ public class StarfaceContactsTask extends AbstractScheduledTask {
 
     @Override
     public void run() throws Exception {
-        final ProcuratModule procuratModule = getApplication().getModuleRegistry().getOrCreateInstance(ProcuratModule.class);
-        final StarfaceModule starfaceModule = getApplication().getModuleRegistry().getOrCreateInstance(StarfaceModule.class);
+        final ProcuratModule procuratModule = getApplication().getModuleRegistry().getInstance(ProcuratModule.class);
+        final StarfaceModule starfaceModule = getApplication().getModuleRegistry().getInstance(StarfaceModule.class);
 
         // Delete all contacts to start fresh
         int deletedCount = starfaceModule.deleteAllContacts();

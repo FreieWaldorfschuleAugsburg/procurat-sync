@@ -3,6 +3,7 @@ package de.waldorfaugsburg.syncer.task;
 import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.AbstractModule;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Set;
@@ -79,7 +80,7 @@ public abstract class AbstractTask {
     }
 
     private void loadModules() {
-        modules.forEach(module -> application.getModuleRegistry().getOrCreateInstance(module));
+        modules.forEach(module -> application.getModuleRegistry().initializeModule(module));
     }
 
     private void destroyModules() {

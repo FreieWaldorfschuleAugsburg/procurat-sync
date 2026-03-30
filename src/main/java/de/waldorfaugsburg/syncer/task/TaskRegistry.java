@@ -14,7 +14,7 @@ import java.util.*;
 public class TaskRegistry {
 
     private final SyncerApplication application;
-    private final Set<AbstractTask> tasks = new HashSet<>();
+    private final Map<String, AbstractTask> taskMap = new HashMap<>();
     private final Timer timer = new Timer();
 
     public TaskRegistry(final SyncerApplication application) {
@@ -25,14 +25,18 @@ public class TaskRegistry {
         startScheduler();
     }
 
+    public void invokeTask(final String taskName) {
+        taskMap.get(taskName).invoke();
+    }
+
     private void registerTasks() {
-        tasks.add(new StarfaceContactsTask(application));
-        tasks.add(new EWSAddressBookTask(application));
-        tasks.add(new ActiveDirectoryTask(application));
+        taskMap.put("starface", new StarfaceContactsTask(application));
+        taskMap.put("ews", new EWSAddressBookTask(application));
+        taskMap.put("ad", new ActiveDirectoryTask(application));
     }
 
     private void loadConfigurations() {
-        final Iterator<AbstractTask> iterator = tasks.iterator();
+        final Iterator<AbstractTask> iterator = taskMap.values().iterator();
         while (iterator.hasNext()) {
             final AbstractTask task = iterator.next();
 
@@ -53,7 +57,7 @@ public class TaskRegistry {
             public void run() {
                 final ZonedDateTime now = ZonedDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
-                for (final AbstractTask task : tasks) {
+                for (final AbstractTask task : taskMap.values()) {
                     if (task instanceof AbstractScheduledTask scheduledTask) {
                         if (scheduledTask.getNextRun().truncatedTo(ChronoUnit.SECONDS).isEqual(now)) {
                             task.invoke();

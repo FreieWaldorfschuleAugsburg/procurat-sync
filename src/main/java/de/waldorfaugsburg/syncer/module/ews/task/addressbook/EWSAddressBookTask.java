@@ -13,15 +13,11 @@ import de.waldorfaugsburg.syncer.module.procurat.model.ProcuratGroupMembership;
 import de.waldorfaugsburg.syncer.module.procurat.model.ProcuratPerson;
 import de.waldorfaugsburg.syncer.task.AbstractScheduledTask;
 import lombok.extern.slf4j.Slf4j;
-import microsoft.exchange.webservices.data.core.PropertySet;
-import microsoft.exchange.webservices.data.core.enumeration.property.EmailAddressKey;
 import microsoft.exchange.webservices.data.core.enumeration.service.DeleteMode;
 import microsoft.exchange.webservices.data.core.service.item.Contact;
 import microsoft.exchange.webservices.data.core.service.item.ContactGroup;
-import microsoft.exchange.webservices.data.misc.OutParam;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -37,8 +33,8 @@ public class EWSAddressBookTask extends AbstractScheduledTask {
 
     @Override
     public void run() throws Exception {
-        procuratModule = getApplication().getModuleRegistry().getOrCreateInstance(ProcuratModule.class);
-        ewsModule = getApplication().getModuleRegistry().getOrCreateInstance(EWSModule.class);
+        procuratModule = getApplication().getModuleRegistry().getInstance(ProcuratModule.class);
+        ewsModule = getApplication().getModuleRegistry().getInstance(EWSModule.class);
 
         log.info("Creating or updating contact groups");
 

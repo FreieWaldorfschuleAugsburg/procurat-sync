@@ -9,6 +9,7 @@ import java.util.List;
 @Getter
 public final class ApplicationConfiguration {
 
+    private boolean pretendMode;
     private MailConfiguration mail;
 
     @NoArgsConstructor
