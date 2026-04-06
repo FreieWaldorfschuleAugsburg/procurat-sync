@@ -31,9 +31,6 @@ public class SyncerApplication {
     private TaskRegistry taskRegistry;
 
     public void enable(final String[] args) throws Exception {
-        Logger logger = LogManager.getRootLogger();
-        Configurator.setAllLevels(logger.getName(), Level.getLevel("DEBUG"));
-
         configuration = loadConfiguration("app.json", ApplicationConfiguration.class);
         mailer = new ApplicationMailer(this);
 
