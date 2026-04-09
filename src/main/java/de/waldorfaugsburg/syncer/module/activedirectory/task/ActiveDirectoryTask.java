@@ -166,19 +166,7 @@ public class ActiveDirectoryTask extends AbstractScheduledTask {
                 throw new IllegalStateException("invalid upn strategy");
             }
 
-            if (upnStrategy.isInternal()) {
-                for (final ProcuratContactInformation info : procuratModule.getContactInformationByPersonId(personId)) {
-                    if (info.getOrder() == 1 && info.getMedium().equals("email") && info.getType().equals("private")) {
-                        user.setAttribute(ActiveDirectoryAttribute.MAIL, info.getContent());
-                    }
-                }
-
-                if (user.getAttribute(ActiveDirectoryAttribute.MAIL) == null) {
-                    throw new IllegalStateException("no mail found");
-                }
-            } else {
-                user.setAttribute(ActiveDirectoryAttribute.MAIL, user.getAttribute(ActiveDirectoryAttribute.USER_PRINCIPAL_NAME));
-            }
+            user.setAttribute(ActiveDirectoryAttribute.MAIL, user.getAttribute(ActiveDirectoryAttribute.USER_PRINCIPAL_NAME));
         }
 
         if (newUser) {
