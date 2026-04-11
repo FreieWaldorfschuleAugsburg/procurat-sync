@@ -19,7 +19,7 @@ public interface ProcuratGroupService {
     @GET("groups/{groupId}")
     Call<ProcuratGroup> findById(@Path("groupId") int groupId);
 
-    @GET("groups/{groupId}/members")
+    @GET("groups/{groupId}/members?includeUdfs=true")
     Call<List<ProcuratGroupMembership>> findMembers(@Path("groupId") int groupId);
 
     @PUT("groups/{groupId}/members/{personId}")

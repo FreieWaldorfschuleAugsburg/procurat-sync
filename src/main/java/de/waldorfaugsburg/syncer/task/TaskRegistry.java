@@ -3,7 +3,7 @@ package de.waldorfaugsburg.syncer.task;
 import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.activedirectory.task.ActiveDirectoryTask;
 import de.waldorfaugsburg.syncer.module.ews.task.addressbook.EWSAddressBookTask;
-import de.waldorfaugsburg.syncer.module.nextcloud.task.NextcloudGroupsTask;
+import de.waldorfaugsburg.syncer.module.nextcloud.task.NextcloudCoursesTask;
 import de.waldorfaugsburg.syncer.module.starface.task.StarfaceContactsTask;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,7 +34,7 @@ public class TaskRegistry {
         taskMap.put("starface", new StarfaceContactsTask(application));
         taskMap.put("ews", new EWSAddressBookTask(application));
         taskMap.put("ad", new ActiveDirectoryTask(application));
-        taskMap.put("nc_groups", new NextcloudGroupsTask(application));
+        taskMap.put("nc_groups", new NextcloudCoursesTask(application));
     }
 
     private void loadConfigurations() {

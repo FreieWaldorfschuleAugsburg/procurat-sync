@@ -4,6 +4,8 @@ import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.AbstractModule;
 import de.waldorfaugsburg.syncer.module.nextcloud.model.OCSResponse;
 import de.waldorfaugsburg.syncer.module.nextcloud.service.NextcloudGroupService;
+import de.waldorfaugsburg.syncer.module.nextcloud.service.NextcloudUserService;
+import lombok.Getter;
 import okhttp3.Credentials;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -17,8 +19,10 @@ import java.util.List;
 
 public class NextcloudModule extends AbstractModule {
 
+    @Getter
     private NextcloudConfig config;
-    private NextcloudGroupService service;
+    private NextcloudGroupService groupService;
+    private NextcloudUserService userService;
 
     public NextcloudModule(final SyncerApplication application) {
         super(application);
@@ -43,7 +47,8 @@ public class NextcloudModule extends AbstractModule {
                 .addConverterFactory(GsonConverterFactory.create(getApplication().getGson()))
                 .build();
 
-        service = retrofit.create(NextcloudGroupService.class);
+        groupService = retrofit.create(NextcloudGroupService.class);
+        userService = retrofit.create(NextcloudUserService.class);
     }
 
     @Override
@@ -51,16 +56,24 @@ public class NextcloudModule extends AbstractModule {
 
     }
 
+    public void addGroupMember(final String userId, final String groupId) throws IOException {
+        userService.addGroupMember(userId, groupId).execute();
+    }
+
+    public void removeGroupMember(final String userId, final String groupId) throws IOException {
+        userService.removeGroupMember(userId, groupId).execute();
+    }
+
     public List<String> getGroupMembers(final String groupId) throws IOException {
-        return getResponseData(service.findGroupMembers(groupId)).getUsers();
+        return getResponseData(groupService.findGroupMembers(groupId)).getUsers();
     }
 
     public void createGroup(final String groupId) throws IOException {
-        service.createGroup(groupId).execute();
+        groupService.createGroup(groupId).execute();
     }
 
     public List<String> getAllGroups() throws IOException {
-        return getResponseData(service.findAllGroups()).getGroups();
+        return getResponseData(groupService.findAllGroups()).getGroups();
     }
 
     private <T> T getResponseData(final Call<OCSResponse<T>> call) throws IOException {

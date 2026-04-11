@@ -121,4 +121,8 @@ public class ProcuratModule extends AbstractModule {
     public List<ProcuratCommunication> getCommunicationsByPersonId(final int personId) throws IOException {
         return communicationService.findByPersonId(personId).execute().body();
     }
+
+    public ProcuratGroup getGroupById(final int groupId) throws IOException {
+        return groupService.findById(groupId).execute().body();
+    }
 }
