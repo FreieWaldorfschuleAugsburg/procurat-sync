@@ -3,21 +3,26 @@ package de.waldorfaugsburg.syncer.module.nextcloud.task;
 import com.google.gson.JsonObject;
 import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.nextcloud.NextcloudModule;
-import de.waldorfaugsburg.syncer.module.nextcloud.model.NextcloudCourse;
+import de.waldorfaugsburg.syncer.module.nextcloud.model.OCSFolderData;
 import de.waldorfaugsburg.syncer.module.procurat.ProcuratModule;
-import de.waldorfaugsburg.syncer.module.procurat.model.ProcuratGroup;
 import de.waldorfaugsburg.syncer.module.procurat.model.ProcuratGroupMembership;
 import de.waldorfaugsburg.syncer.task.AbstractScheduledTask;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Slf4j
 public class NextcloudCoursesTask extends AbstractScheduledTask {
 
+    private static final int READ_ONLY_PERMISSION = 1;
+    private static final int WRITE_PERMISSION = 15;
+    private static final int FULL_PERMISSION = 31;
+
+    private NextcloudCoursesTaskConfiguration configuration;
     private ProcuratModule procuratModule;
     private NextcloudModule nextcloudModule;
 
@@ -29,38 +34,112 @@ public class NextcloudCoursesTask extends AbstractScheduledTask {
     public void run() throws Exception {
         procuratModule = getApplication().getModuleRegistry().getInstance(ProcuratModule.class);
         nextcloudModule = getApplication().getModuleRegistry().getInstance(NextcloudModule.class);
+        nextcloudModule.login();
 
-        final NextcloudCoursesTaskConfiguration configuration = (NextcloudCoursesTaskConfiguration) getConfiguration();
+        final List<String> allGroups = nextcloudModule.getAllGroups();
+        final Map<String, OCSFolderData> allFoldersMap = new HashMap<>();
+        for (final Map.Entry<String, OCSFolderData> entry : nextcloudModule.getAllFolders().entrySet()) {
+            final OCSFolderData folderData = entry.getValue();
+            allFoldersMap.put(folderData.getMountPoint(), folderData);
+        }
 
-        log.info("Loading courses");
+        configuration = (NextcloudCoursesTaskConfiguration) getConfiguration();
 
-        final List<NextcloudCourse> courses = new ArrayList<>();
+        log.info("Updating student groups");
+
+        for (final NextcloudStudentGroupConfiguration studentGroupConfiguration : configuration.getStudentGroups()) {
+            try {
+                final String studentGroupName = (studentGroupConfiguration.getName() + "-" + configuration.getSchoolYear()).replaceAll(" ", "_");
+                final List<String> studentUsernames = findStudents(studentGroupConfiguration);
+
+                // Update or create student group
+                updateOrCreatePermissionGroups(allGroups, studentGroupName, studentUsernames);
+
+                log.info("Updated student group {}", studentGroupName);
+            } catch (final Exception e) {
+                log.error("Error updating student group {}", studentGroupConfiguration.getName(), e);
+            }
+        }
+
+        log.info("Updating courses");
+
         for (final NextcloudCourseConfiguration courseConfiguration : configuration.getCourses()) {
             try {
-                final NextcloudCourse course = new NextcloudCourse();
-                course.setName(generateCourseName(courseConfiguration, configuration.getSchoolYear()).replaceAll(" ", "_"));
-                course.setTeacherUsernames(courseConfiguration.getTeachers());
-                course.setStudentUsernames(findCourseStudents(courseConfiguration));
+                final String courseName = generateCourseName(courseConfiguration);
 
-                courses.add(course);
-                log.info("Loaded course {} with teachers [{}] and students [{}]", course.getName(), String.join(";", course.getTeacherUsernames()), String.join(";", course.getStudentUsernames()));
+                // Update or create teacher group
+                updateOrCreatePermissionGroups(allGroups, courseName, courseConfiguration.getTeachers());
+
+                // Create main folder
+                final Map<String, Integer> studentsRO = new HashMap<>();
+                studentsRO.put(courseName, FULL_PERMISSION);
+                for (final String studentGroup : courseConfiguration.getStudentGroups()) {
+                    studentsRO.put(generateStudentGroupName(studentGroup), READ_ONLY_PERMISSION);
+                }
+                updateOrCreateFolder(allFoldersMap, courseName, studentsRO);
+
+                // Create sharing folder
+                final Map<String, Integer> allRW = new HashMap<>();
+                allRW.put(courseName, FULL_PERMISSION);
+                for (final String studentGroup : courseConfiguration.getStudentGroups()) {
+                    allRW.put(generateStudentGroupName(studentGroup), WRITE_PERMISSION);
+                }
+                updateOrCreateFolder(allFoldersMap, courseName + "/_AUSTAUSCH", allRW);
+
+                // Create teacher only folder
+                updateOrCreateFolder(allFoldersMap, courseName + "/_LEHRKRAFT", Map.of(courseName, FULL_PERMISSION));
+
+                log.info("Updated course {} with teachers [{}] and student groups [{}]", courseName, String.join(";", courseConfiguration.getTeachers()), String.join(";", courseConfiguration.getStudentGroups()));
             } catch (final Exception e) {
                 log.error("Error loading course {}", courseConfiguration.getName(), e);
             }
         }
+    }
 
-        log.info("Loaded {} courses", courses.size());
-        log.info("Updating permission groups");
+    private void updateOrCreateFolder(final Map<String, OCSFolderData> allFoldersMap, final String folderName, final Map<String, Integer> newPermissions) throws IOException {
+        OCSFolderData folderData = allFoldersMap.get(folderName);
+        if (folderData == null) {
+            if (!getApplication().getConfiguration().isPretendMode()) {
+                folderData = nextcloudModule.createFolder(folderName);
+            }
 
-        final List<String> allGroups = nextcloudModule.getAllGroups();
-        for (final NextcloudCourse course : courses) {
-            try {
-                updateOrCreatePermissionGroups(allGroups, course.getName() + "T", course.getTeacherUsernames());
-                updateOrCreatePermissionGroups(allGroups, course.getName() + "S", course.getStudentUsernames());
-            } catch (final Exception e) {
-                log.error("Error updating permission groups for course {}", course.getName(), e);
+            if (folderData == null && !getApplication().getConfiguration().isPretendMode()) {
+                throw new IllegalStateException("folder not created");
             }
         }
+
+        final Map<String, Integer> currentPermissions = folderData != null ? folderData.getGroupPermissions() : new HashMap<>();
+        for (final Map.Entry<String, Integer> entry : currentPermissions.entrySet()) {
+            if (!newPermissions.containsKey(entry.getKey())) {
+                if (getApplication().getConfiguration().isPretendMode()) {
+                    log.info("PRETEND: Remove group {} permission from folder {}", entry.getKey(), folderName);
+                } else {
+                    log.info("Removing group {} permission from folder {}", entry.getKey(), folderName);
+                    nextcloudModule.removeFolderGroupPermission(folderData.getId(), entry.getKey());
+                }
+            } else if (!newPermissions.get(entry.getKey()).equals(entry.getValue())) {
+                if (getApplication().getConfiguration().isPretendMode()) {
+                    log.info("PRETEND: Update group {} permission to folder {} with value {}", entry.getKey(), folderName, entry.getValue());
+                } else {
+                    log.info("Updating group {} permission to folder {} with value {}", entry.getKey(), folderName, entry.getValue());
+                    nextcloudModule.removeFolderGroupPermission(folderData.getId(), entry.getKey());
+                    nextcloudModule.addFolderGroupPermission(folderData.getId(), entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        for (final Map.Entry<String, Integer> entry : newPermissions.entrySet()) {
+            if (!currentPermissions.containsKey(entry.getKey())) {
+                if (getApplication().getConfiguration().isPretendMode()) {
+                    log.info("PRETEND: Add group {} permission to folder {} with value {}", entry.getKey(), folderName, entry.getValue());
+                } else {
+                    log.info("Adding group {} permission to folder {} with value {}", entry.getKey(), folderName, entry.getValue());
+                    nextcloudModule.addFolderGroupPermission(folderData.getId(), entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        log.info("Updated folder {}", folderName);
     }
 
     private void updateOrCreatePermissionGroups(final List<String> allGroups, final String groupName, final List<String> newGroupMembers) throws IOException {
@@ -73,7 +152,7 @@ public class NextcloudCoursesTask extends AbstractScheduledTask {
             }
         }
 
-        final List<String> currentGroupMembers = nextcloudModule.getGroupMembers(groupName);
+        final List<String> currentGroupMembers = !allGroups.contains(groupName) && getApplication().getConfiguration().isPretendMode() ? new ArrayList<>() : nextcloudModule.getGroupMembers(groupName);
         for (final String currentGroupMember : currentGroupMembers) {
             if (!newGroupMembers.contains(currentGroupMember)) {
                 if (getApplication().getConfiguration().isPretendMode()) {
@@ -97,52 +176,45 @@ public class NextcloudCoursesTask extends AbstractScheduledTask {
         }
     }
 
-    private String generateCourseName(final NextcloudCourseConfiguration courseConfiguration, final String schoolYear) throws IOException {
+    private String generateCourseName(final NextcloudCourseConfiguration courseConfiguration) {
         final StringBuilder builder = new StringBuilder();
-
-        for (final Integer groupId : courseConfiguration.getGroupIds()) {
-            final ProcuratGroup group = procuratModule.getGroupById(groupId);
-            builder.append(group.getName());
-
-            for (final String filterValue : courseConfiguration.getStudentFilter().values()) {
-                builder.append(filterValue);
-            }
-
-            builder.append("-");
+        for (final String studentGroups : courseConfiguration.getStudentGroups()) {
+            builder.append(studentGroups).append("-");
         }
-
         builder.append(courseConfiguration.getName()).append("-");
-        builder.append(schoolYear);
+        builder.append(configuration.getSchoolYear());
 
-        return builder.toString();
+        return builder.toString().replaceAll(" ", "_");
     }
 
-    private List<String> findCourseStudents(final NextcloudCourseConfiguration courseConfiguration) throws IOException {
+    private String generateStudentGroupName(final String groupName) {
+        return (groupName + "-" + configuration.getSchoolYear()).replaceAll(" ", "_");
+    }
+
+    private List<String> findStudents(final NextcloudStudentGroupConfiguration configuration) throws IOException {
         final List<String> students = new ArrayList<>();
 
-        for (final Integer groupId : courseConfiguration.getGroupIds()) {
-            for (final ProcuratGroupMembership membership : procuratModule.getGroupMemberships(groupId)) {
-                final JsonObject data = membership.getJsonData();
-                if (!data.has(nextcloudModule.getConfig().getUsernameUDF())) {
-                    log.warn("Person {} is missing username UDF", membership.getPersonId());
-                    continue;
-                }
-
-                if (!isFilterMatching(courseConfiguration, membership)) {
-                    continue;
-                }
-
-                students.add(data.get(nextcloudModule.getConfig().getUsernameUDF()).getAsString());
+        for (final ProcuratGroupMembership membership : procuratModule.getGroupMemberships(configuration.getGroupId())) {
+            final JsonObject data = membership.getJsonData();
+            if (!data.has(nextcloudModule.getConfig().getUsernameUDF())) {
+                log.warn("Person {} is missing username UDF", membership.getPersonId());
+                continue;
             }
+
+            if (!isFilterMatching(configuration, membership)) {
+                continue;
+            }
+
+            students.add(data.get(nextcloudModule.getConfig().getUsernameUDF()).getAsString());
         }
 
         return students;
     }
 
-    private boolean isFilterMatching(final NextcloudCourseConfiguration courseConfiguration, final ProcuratGroupMembership membership) {
+    private boolean isFilterMatching(final NextcloudStudentGroupConfiguration configuration, final ProcuratGroupMembership membership) {
         final JsonObject data = membership.getJsonData();
 
-        for (final Map.Entry<String, String> entry : courseConfiguration.getStudentFilter().entrySet()) {
+        for (final Map.Entry<String, String> entry : configuration.getUdfFilter().entrySet()) {
             if (!data.has(entry.getKey())) {
                 log.warn("Person {} is missing filter key {}", membership.getPersonId(), entry.getKey());
                 return false;

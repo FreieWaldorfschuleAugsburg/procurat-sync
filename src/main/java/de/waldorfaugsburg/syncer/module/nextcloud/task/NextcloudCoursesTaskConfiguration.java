@@ -11,6 +11,7 @@ import java.util.List;
 public class NextcloudCoursesTaskConfiguration extends ScheduledTaskConfiguration {
 
     private String schoolYear;
+    private List<NextcloudStudentGroupConfiguration> studentGroups;
     private List<NextcloudCourseConfiguration> courses;
 
 }

@@ -1,9 +1,13 @@
 package de.waldorfaugsburg.syncer.module.nextcloud;
 
+import com.google.gson.JsonObject;
 import de.waldorfaugsburg.syncer.SyncerApplication;
 import de.waldorfaugsburg.syncer.module.AbstractModule;
+import de.waldorfaugsburg.syncer.module.nextcloud.model.OCSFolderData;
 import de.waldorfaugsburg.syncer.module.nextcloud.model.OCSResponse;
+import de.waldorfaugsburg.syncer.module.nextcloud.service.NextcloudFolderService;
 import de.waldorfaugsburg.syncer.module.nextcloud.service.NextcloudGroupService;
+import de.waldorfaugsburg.syncer.module.nextcloud.service.NextcloudService;
 import de.waldorfaugsburg.syncer.module.nextcloud.service.NextcloudUserService;
 import lombok.Getter;
 import okhttp3.Credentials;
@@ -16,13 +20,17 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class NextcloudModule extends AbstractModule {
 
     @Getter
     private NextcloudConfig config;
+
+    private NextcloudService service;
     private NextcloudGroupService groupService;
     private NextcloudUserService userService;
+    private NextcloudFolderService folderService;
 
     public NextcloudModule(final SyncerApplication application) {
         super(application);
@@ -47,13 +55,44 @@ public class NextcloudModule extends AbstractModule {
                 .addConverterFactory(GsonConverterFactory.create(getApplication().getGson()))
                 .build();
 
+        service = retrofit.create(NextcloudService.class);
         groupService = retrofit.create(NextcloudGroupService.class);
         userService = retrofit.create(NextcloudUserService.class);
+        folderService = retrofit.create(NextcloudFolderService.class);
     }
 
     @Override
     public void destroy() throws Exception {
 
+    }
+
+    public void login() {
+        service.login();
+    }
+
+    public void addFolderGroupPermission(final int folderId, final String groupId, final int permission) throws IOException {
+        final JsonObject accessObject = new JsonObject();
+        accessObject.addProperty("group", groupId);
+        folderService.addFolderGroupAccess(folderId, accessObject).execute();
+
+        final JsonObject permissionObject = new JsonObject();
+        permissionObject.addProperty("permissions", permission);
+        folderService.addFolderGroupPermission(folderId, groupId, permissionObject).execute();
+    }
+
+    public void removeFolderGroupPermission(final int folderId, final String groupId) throws IOException {
+        folderService.removeFolderGroupAccess(folderId, groupId).execute();
+    }
+
+    public OCSFolderData createFolder(final String folderName) throws IOException {
+        final JsonObject object = new JsonObject();
+        object.addProperty("mountpoint", folderName);
+
+        return getResponseData(folderService.createFolder(object));
+    }
+
+    public Map<String, OCSFolderData> getAllFolders() throws IOException {
+        return getResponseData(folderService.findAllFolders());
     }
 
     public void addGroupMember(final String userId, final String groupId) throws IOException {

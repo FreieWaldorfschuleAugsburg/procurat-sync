@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class NextcloudCourse {
+public class CourseModel {
 
     private String name;
     private List<String> teacherUsernames;
