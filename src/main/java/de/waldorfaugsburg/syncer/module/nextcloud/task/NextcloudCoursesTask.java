@@ -178,9 +178,16 @@ public class NextcloudCoursesTask extends AbstractScheduledTask {
 
     private String generateCourseName(final NextcloudCourseConfiguration courseConfiguration) {
         final StringBuilder builder = new StringBuilder();
-        for (final String studentGroups : courseConfiguration.getStudentGroups()) {
-            builder.append(studentGroups).append("-");
+
+        for (int i = 0; i < courseConfiguration.getStudentGroups().size(); i++) {
+            builder.append(courseConfiguration.getStudentGroups().get(i));
+            if (i == courseConfiguration.getStudentGroups().size() - 1) {
+                builder.append("-");
+            } else {
+                builder.append("_");
+            }
         }
+
         builder.append(courseConfiguration.getName()).append("-");
         builder.append(configuration.getSchoolYear());
 
